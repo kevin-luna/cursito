@@ -11,6 +11,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('../views/AdminView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/worker',
+      name: 'worker',
+      component: () => import('../views/WorkerView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
@@ -23,7 +35,7 @@ const router = createRouter({
   ],
 })
 
-// Navigation guard para verificar autenticación
+// Navigation guard para verificar autenticación y roles
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
@@ -45,7 +57,13 @@ router.beforeEach(async (to, from, next) => {
         await authStore.fetchCurrentUser()
       }
 
-      // Si llegamos aquí, el token es válido
+      // Verificar si la ruta requiere rol de admin
+      if (to.meta.requiresAdmin && !authStore.isAdmin) {
+        next('/worker')
+        return
+      }
+
+      // Si llegamos aquí, el token es válido y el rol es correcto
       next()
     } catch {
       // El token expiró o es inválido
