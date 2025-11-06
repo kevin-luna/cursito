@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 // Refs para los campos del formulario
 const nombreCompleto = ref('')
@@ -18,8 +20,9 @@ const password = ref('')
 const confirmPassword = ref('')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
-const loading = ref(false)
 const formValid = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
 
 // Lista de departamentos
 const departamentos = [
@@ -90,24 +93,42 @@ const confirmPasswordRules = [
 ]
 
 const handleSignUp = async () => {
-  loading.value = true
-  // Simular llamada a API
-  setTimeout(() => {
-    loading.value = false
-    console.log('Registro:', {
-      nombreCompleto: nombreCompleto.value,
-      apellidoPaterno: apellidoPaterno.value,
-      apellidoMaterno: apellidoMaterno.value,
+  if (!formValid.value) {
+    errorMessage.value = 'Por favor completa todos los campos correctamente'
+    return
+  }
+
+  try {
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    // Por ahora usamos el ID del departamento como string
+    // En una implementación completa, deberías hacer una llamada a /departments
+    // para obtener el ID real del departamento seleccionado
+    await authStore.register({
       email: email.value,
-      departamento: departamento.value,
+      password: password.value,
+      name: nombreCompleto.value,
+      father_lastname: apellidoPaterno.value,
+      mother_lastname: apellidoMaterno.value,
+      department_id: departamento.value, // Esto debería ser un UUID en producción
       rfc: rfc.value,
       curp: curp.value,
-      sexo: sexo.value,
-      telefono: telefono.value,
+      sex: sexo.value,
+      phone: telefono.value,
+      role: 'teacher', // Por defecto, todos los nuevos usuarios son profesores
     })
-    // Aquí iría la lógica de registro
-    router.push({ name: 'login' })
-  }, 1500)
+
+    successMessage.value = 'Registro exitoso. Redirigiendo...'
+
+    // Redirigir al home después del registro exitoso
+    setTimeout(() => {
+      router.push({ name: 'home' })
+    }, 1500)
+  } catch (error: any) {
+    console.error('Error en registro:', error)
+    errorMessage.value = error.response?.data?.detail || 'Error al registrar usuario. Por favor intenta de nuevo.'
+  }
 }
 
 const goToLogin = () => {
@@ -130,6 +151,27 @@ const goToLogin = () => {
           </v-card-text>
 
           <v-card-text class="px-8 pb-8">
+            <!-- Mensajes de error y éxito -->
+            <v-alert
+              v-if="errorMessage"
+              type="error"
+              variant="tonal"
+              closable
+              @click:close="errorMessage = ''"
+              class="mb-4"
+            >
+              {{ errorMessage }}
+            </v-alert>
+
+            <v-alert
+              v-if="successMessage"
+              type="success"
+              variant="tonal"
+              class="mb-4"
+            >
+              {{ successMessage }}
+            </v-alert>
+
             <v-form v-model="formValid" @submit.prevent="handleSignUp">
               <!-- Nombre completo -->
               <v-text-field
@@ -310,7 +352,7 @@ const goToLogin = () => {
               <!-- Botón de registro -->
               <v-btn
                 type="submit"
-                :loading="loading"
+                :loading="authStore.loading"
                 :disabled="!formValid"
                 block
                 size="large"

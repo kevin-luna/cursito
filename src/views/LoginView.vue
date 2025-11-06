@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const rememberMe = ref(false)
-const loading = ref(false)
+const errorMessage = ref('')
 
 const emailRules = [
   (v: string) => !!v || 'El correo electrónico es requerido',
@@ -18,14 +20,20 @@ const emailRules = [
 const passwordRules = [(v: string) => !!v || 'La contraseña es requerida']
 
 const handleLogin = async () => {
-  loading.value = true
-  // Simular llamada a API
-  setTimeout(() => {
-    loading.value = false
-    // Aquí iría la lógica de autenticación
-    console.log('Login:', { email: email.value, password: password.value, rememberMe: rememberMe.value })
-    // router.push({ name: 'home' })
-  }, 1500)
+  try {
+    errorMessage.value = ''
+
+    await authStore.login({
+      email: email.value,
+      password: password.value,
+    })
+
+    // Redirigir al home después del login exitoso
+    router.push({ name: 'home' })
+  } catch (error: any) {
+    console.error('Error en login:', error)
+    errorMessage.value = error.response?.data?.detail || 'Error al iniciar sesión. Verifica tus credenciales.'
+  }
 }
 </script>
 
@@ -44,6 +52,18 @@ const handleLogin = async () => {
           </v-card-text>
 
           <v-card-text class="px-8 pb-8">
+            <!-- Mensaje de error -->
+            <v-alert
+              v-if="errorMessage"
+              type="error"
+              variant="tonal"
+              closable
+              @click:close="errorMessage = ''"
+              class="mb-4"
+            >
+              {{ errorMessage }}
+            </v-alert>
+
             <v-form @submit.prevent="handleLogin">
               <!-- Campo de correo electrónico -->
               <v-text-field
@@ -92,7 +112,7 @@ const handleLogin = async () => {
               <!-- Botón de inicio de sesión -->
               <v-btn
                 type="submit"
-                :loading="loading"
+                :loading="authStore.loading"
                 block
                 size="large"
                 color="primary"
