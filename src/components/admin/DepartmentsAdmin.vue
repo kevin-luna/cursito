@@ -87,10 +87,7 @@ onMounted(loadDepartments)
             size="small"
             variant="text"
             color="error"
-            @click="
-              selectedDepartment = item
-              deleteDialog = true
-            "
+            @click="selectedDepartment = item;deleteDialog = true"
           />
         </template>
       </v-data-table>
