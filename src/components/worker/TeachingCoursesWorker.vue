@@ -44,7 +44,7 @@ const openAttendanceDialog = async (course: Course) => {
   try {
     const enrollments = await courseService.getEnrollments(course.id)
     enrolledStudents.value = enrollments
-    attendanceDate.value = new Date().toISOString().split('T')[0]
+    attendanceDate.value = new Date().toISOString().split('T')[0] || ''
     selectedStudents.value = []
     attendanceDialog.value = true
   } finally {

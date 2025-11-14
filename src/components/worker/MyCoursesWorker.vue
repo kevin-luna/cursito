@@ -225,10 +225,10 @@ onMounted(loadEnrollments)
           <v-spacer />
           <v-btn @click="surveysDialog = false">Cerrar</v-btn>
           <v-btn
-            v-if="surveyQuestions.length > 0"
+            v-if="surveyQuestions.length > 0 && selectedCourse"
             color="primary"
             :loading="loading"
-            @click="submitSurvey(surveyQuestions[0].survey_id, selectedCourse?.id || '')"
+            @click="submitSurvey(surveyQuestions[0]!.survey_id, selectedCourse.id)"
           >
             Enviar
           </v-btn>
