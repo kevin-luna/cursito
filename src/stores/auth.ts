@@ -15,9 +15,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Getters
   const isAuthenticated = computed(() => !!token.value && !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
-  const isTeacher = computed(() => user.value?.role === 'teacher')
-  const isCoordinator = computed(() => user.value?.role === 'coordinator')
+  // role: 0 = docente/teacher, 1 = admin/jefe de departamento
+  const isAdmin = computed(() => user.value?.role === 1 || user.value?.role === '1')
+  const isTeacher = computed(() => user.value?.role === 0 || user.value?.role === '0')
+  const isCoordinator = computed(() => user.value?.role === 1 || user.value?.role === '1')
 
   // Actions
   async function login(credentials: LoginRequest) {

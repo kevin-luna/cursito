@@ -1,4 +1,5 @@
 import api from './api'
+import type { PaginatedResponse } from './types'
 
 export interface Period {
   id: string
@@ -21,8 +22,8 @@ export interface UpdatePeriodRequest {
 
 class PeriodService {
   async getAll(): Promise<Period[]> {
-    const response = await api.get<Period[]>('/periods')
-    return response.data
+    const response = await api.get<PaginatedResponse<Period>>('/periods')
+    return response.data.items
   }
 
   async getById(id: string): Promise<Period> {

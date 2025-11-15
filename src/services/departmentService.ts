@@ -1,4 +1,5 @@
 import api from './api'
+import type { PaginatedResponse } from './types'
 
 export interface Department {
   id: string
@@ -15,8 +16,8 @@ export interface UpdateDepartmentRequest {
 
 class DepartmentService {
   async getAll(): Promise<Department[]> {
-    const response = await api.get<Department[]>('/departments')
-    return response.data
+    const response = await api.get<PaginatedResponse<Department>>('/departments')
+    return response.data.items
   }
 
   async getById(id: string): Promise<Department> {

@@ -11,7 +11,7 @@ export interface LoginResponse {
   expires_in: number
   worker_id: string
   email: string
-  role: string
+  role: string | number // 0 = docente, 1 = admin/jefe de departamento
   department_id: string
 }
 
@@ -35,7 +35,7 @@ export interface Worker {
   name: string
   father_lastname: string
   mother_lastname: string
-  role: string
+  role: string | number // 0 = docente, 1 = admin/jefe de departamento
   department_id: string
   rfc: string
   curp: string

@@ -1,4 +1,5 @@
 import api from './api'
+import type { PaginatedResponse } from './types'
 
 export interface Attendance {
   id: string
@@ -21,8 +22,8 @@ export interface BulkAttendanceRequest {
 
 class AttendanceService {
   async getAll(): Promise<Attendance[]> {
-    const response = await api.get<Attendance[]>('/attendances')
-    return response.data
+    const response = await api.get<PaginatedResponse<Attendance>>('/attendances')
+    return response.data.items
   }
 
   async getById(id: string): Promise<Attendance> {

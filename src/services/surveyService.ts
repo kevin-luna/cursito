@@ -1,4 +1,5 @@
 import api from './api'
+import type { PaginatedResponse } from './types'
 
 export interface Survey {
   id: string
@@ -51,8 +52,8 @@ export interface SubmitSurveyAnswersRequest {
 class SurveyService {
   // Surveys
   async getAllSurveys(): Promise<Survey[]> {
-    const response = await api.get<Survey[]>('/surveys')
-    return response.data
+    const response = await api.get<PaginatedResponse<Survey>>('/surveys')
+    return response.data.items
   }
 
   async getSurveyById(id: string): Promise<Survey> {

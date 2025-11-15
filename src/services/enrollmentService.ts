@@ -1,4 +1,5 @@
 import api from './api'
+import type { PaginatedResponse } from './types'
 
 export interface Enrollment {
   id: string
@@ -18,8 +19,8 @@ export interface UpdateGradeRequest {
 
 class EnrollmentService {
   async getAll(): Promise<Enrollment[]> {
-    const response = await api.get<Enrollment[]>('/enrollments')
-    return response.data
+    const response = await api.get<PaginatedResponse<Enrollment>>('/enrollments')
+    return response.data.items
   }
 
   async getById(id: string): Promise<Enrollment> {

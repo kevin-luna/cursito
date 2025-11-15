@@ -1,5 +1,6 @@
 import api from './api'
 import type { Worker } from './authService'
+import type { PaginatedResponse } from './types'
 
 export interface UpdateWorkerRequest {
   name?: string
@@ -15,8 +16,8 @@ export interface UpdateWorkerRequest {
 
 class WorkerService {
   async getAll(): Promise<Worker[]> {
-    const response = await api.get<Worker[]>('/workers')
-    return response.data
+    const response = await api.get<PaginatedResponse<Worker>>('/workers')
+    return response.data.items
   }
 
   async getById(id: string): Promise<Worker> {
@@ -34,8 +35,8 @@ class WorkerService {
   }
 
   async getByDepartment(departmentId: string): Promise<Worker[]> {
-    const response = await api.get<Worker[]>(`/workers/department/${departmentId}`)
-    return response.data
+    const response = await api.get<PaginatedResponse<Worker>>(`/workers/department/${departmentId}`)
+    return response.data.items
   }
 }
 

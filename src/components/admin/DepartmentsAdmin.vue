@@ -14,6 +14,7 @@ const selectedDepartment = ref<Department | null>(null)
 const formData = ref<CreateDepartmentRequest>({ name: '' })
 
 const headers = [
+  { title: 'ID', key: 'id'},
   { title: 'Nombre', key: 'name' },
   { title: 'Acciones', key: 'actions', sortable: false },
 ]
