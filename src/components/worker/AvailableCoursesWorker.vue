@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import courseService, { type Course } from '@/services/courseService'
 import enrollmentService from '@/services/enrollmentService'
 import { useAuthStore } from '@/stores/auth'
@@ -10,6 +10,11 @@ const loading = ref(false)
 const detailsDialog = ref(false)
 const selectedCourse = ref<Course | null>(null)
 const enrolledCourses = ref<string[]>([])
+
+// Pagination state
+const page = ref(1)
+const itemsPerPage = ref(20)
+const totalItems = ref(0)
 
 const typeLabels: Record<number, string> = { 0: 'Diplomado', 1: 'Taller' }
 const modeLabels: Record<number, string> = { 0: 'Virtual', 1: 'Presencial' }
@@ -27,13 +32,20 @@ const availableCourses = computed(() => {
 const loadCourses = async () => {
   loading.value = true
   try {
-    courses.value = await courseService.getAll()
+    const response = await courseService.getAll(page.value, itemsPerPage.value)
+    courses.value = response.items
+    totalItems.value = response.total_count
     const myEnrollments = await enrollmentService.getMyEnrollments()
     enrolledCourses.value = myEnrollments.map((e) => e.course_id)
   } finally {
     loading.value = false
   }
 }
+
+// Watch for page changes
+watch(page, () => {
+  loadCourses()
+})
 
 const isEnrolled = (courseId: string) => enrolledCourses.value.includes(courseId)
 
@@ -71,10 +83,10 @@ onMounted(loadCourses)
               <v-card-text>
                 <div class="mb-2">
                   <v-chip size="small" class="mr-2" color="primary">{{
-                    typeLabels[course.type]
+                    typeLabels[course.course_type]
                   }}</v-chip>
-                  <v-chip size="small" class="mr-2">{{ modeLabels[course.mode] }}</v-chip>
-                  <v-chip size="small">{{ profileLabels[course.profile] }}</v-chip>
+                  <v-chip size="small" class="mr-2">{{ modeLabels[course.modality] }}</v-chip>
+                  <v-chip size="small">{{ profileLabels[course.course_profile] }}</v-chip>
                 </div>
                 <div class="text-body-2 mt-2">
                   <strong>Inicia:</strong> {{ course.start_date }}
@@ -107,6 +119,15 @@ onMounted(loadCourses)
         <v-alert v-if="availableCourses.length === 0" type="info" class="mt-4">
           No hay cursos disponibles para inscripción en este momento
         </v-alert>
+
+        <!-- Paginación -->
+        <div v-if="totalItems > itemsPerPage" class="d-flex justify-center mt-4">
+          <v-pagination
+            v-model="page"
+            :length="Math.ceil(totalItems / itemsPerPage)"
+            :total-visible="7"
+          ></v-pagination>
+        </div>
       </v-card-text>
     </v-card>
 
@@ -130,13 +151,13 @@ onMounted(loadCourses)
           <v-divider class="my-3" />
           <v-row>
             <v-col cols="6">
-              <strong>Tipo:</strong> {{ typeLabels[selectedCourse.type] }}
+              <strong>Tipo:</strong> {{ typeLabels[selectedCourse.course_type] }}
             </v-col>
             <v-col cols="6">
-              <strong>Modalidad:</strong> {{ modeLabels[selectedCourse.mode] }}
+              <strong>Modalidad:</strong> {{ modeLabels[selectedCourse.modality] }}
             </v-col>
             <v-col cols="6">
-              <strong>Perfil:</strong> {{ profileLabels[selectedCourse.profile] }}
+              <strong>Perfil:</strong> {{ profileLabels[selectedCourse.course_profile] }}
             </v-col>
             <v-col cols="6">
               <strong>Horario:</strong> {{ selectedCourse.start_time }} -

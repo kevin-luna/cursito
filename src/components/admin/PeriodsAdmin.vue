@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import periodService, { type Period, type CreatePeriodRequest } from '@/services/periodService'
 
 const periods = ref<Period[]>([])
@@ -8,6 +8,12 @@ const dialog = ref(false)
 const editMode = ref(false)
 const selectedPeriod = ref<Period | null>(null)
 const formData = ref<CreatePeriodRequest>({ name: '', start_date: '', end_date: '' })
+
+// Pagination state
+const page = ref(1)
+const itemsPerPage = ref(10)
+const totalItems = ref(0)
+const serverItemsLength = ref(0)
 
 const headers = [
   { title: 'Nombre', key: 'name' },
@@ -19,11 +25,19 @@ const headers = [
 const loadPeriods = async () => {
   loading.value = true
   try {
-    periods.value = await periodService.getAll()
+    const response = await periodService.getAll(page.value, itemsPerPage.value)
+    periods.value = response.items
+    totalItems.value = response.total_count
+    serverItemsLength.value = response.total_count
   } finally {
     loading.value = false
   }
 }
+
+// Watch for page or itemsPerPage changes
+watch([page, itemsPerPage], () => {
+  loadPeriods()
+})
 
 const openCreateDialog = () => {
   editMode.value = false
@@ -65,11 +79,19 @@ onMounted(loadPeriods)
       </v-btn>
     </v-card-title>
     <v-card-text>
-      <v-data-table :headers="headers" :items="periods" :loading="loading">
+      <v-data-table-server
+        :headers="headers"
+        :items="periods"
+        :loading="loading"
+        :items-length="serverItemsLength"
+        v-model:page="page"
+        v-model:items-per-page="itemsPerPage"
+        :items-per-page-options="[5, 10, 25, 50, 100]"
+      >
         <template v-slot:item.actions="{ item }">
           <v-btn icon="mdi-pencil" size="small" variant="text" @click="openEditDialog(item)" />
         </template>
-      </v-data-table>
+      </v-data-table-server>
     </v-card-text>
 
     <v-dialog v-model="dialog" max-width="600px">

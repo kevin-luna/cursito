@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import courseService, { type Course, type CreateCourseRequest } from '@/services/courseService'
 import periodService, { type Period } from '@/services/periodService'
 
@@ -11,6 +11,12 @@ const deleteDialog = ref(false)
 const editMode = ref(false)
 const selectedCourse = ref<Course | null>(null)
 
+// Pagination state
+const page = ref(1)
+const itemsPerPage = ref(10)
+const totalItems = ref(0)
+const serverItemsLength = ref(0)
+
 const formData = ref<CreateCourseRequest>({
   period_id: '',
   target: '',
@@ -19,11 +25,12 @@ const formData = ref<CreateCourseRequest>({
   end_date: '',
   start_time: '',
   end_time: '',
-  type: 0,
-  mode: 0,
-  profile: 0,
+  course_type: 0,
+  modality: 0,
+  course_profile: 0,
   goal: '',
   details: '',
+  instructors: [],
 })
 
 const headers = [
@@ -31,8 +38,8 @@ const headers = [
   { title: 'Objetivo', key: 'target' },
   { title: 'Fecha Inicio', key: 'start_date' },
   { title: 'Fecha Fin', key: 'end_date' },
-  { title: 'Tipo', key: 'type' },
-  { title: 'Modalidad', key: 'mode' },
+  { title: 'Tipo', key: 'course_type' },
+  { title: 'Modalidad', key: 'modality' },
   { title: 'Acciones', key: 'actions', sortable: false },
 ]
 
@@ -57,7 +64,10 @@ const getModeLabel = (mode: number) => modeOptions.find((m) => m.value === mode)
 const loadCourses = async () => {
   loading.value = true
   try {
-    courses.value = await courseService.getAll()
+    const response = await courseService.getAll(page.value, itemsPerPage.value)
+    courses.value = response.items
+    totalItems.value = response.total_count
+    serverItemsLength.value = response.total_count
   } catch (error) {
     console.error('Error al cargar cursos:', error)
   } finally {
@@ -67,11 +77,17 @@ const loadCourses = async () => {
 
 const loadPeriods = async () => {
   try {
-    periods.value = await periodService.getAll()
+    const response = await periodService.getAll(1, 100)
+    periods.value = response.items
   } catch (error) {
     console.error('Error al cargar periodos:', error)
   }
 }
+
+// Watch for page or itemsPerPage changes
+watch([page, itemsPerPage], () => {
+  loadCourses()
+})
 
 const openCreateDialog = () => {
   editMode.value = false
@@ -83,11 +99,12 @@ const openCreateDialog = () => {
     end_date: '',
     start_time: '',
     end_time: '',
-    type: 0,
-    mode: 0,
-    profile: 0,
+    course_type: 0,
+    modality: 0,
+    course_profile: 0,
     goal: '',
     details: '',
+    instructors: [],
   }
   dialog.value = true
 }
@@ -152,17 +169,21 @@ onMounted(() => {
       </v-card-title>
 
       <v-card-text>
-        <v-data-table
+        <v-data-table-server
           :headers="headers"
           :items="courses"
           :loading="loading"
+          :items-length="serverItemsLength"
+          v-model:page="page"
+          v-model:items-per-page="itemsPerPage"
+          :items-per-page-options="[5, 10, 25, 50, 100]"
           loading-text="Cargando cursos..."
         >
-          <template v-slot:item.type="{ item }">
-            {{ getTypeLabel(item.type) }}
+          <template v-slot:item.course_type="{ item }">
+            {{ getTypeLabel(item.course_type) }}
           </template>
-          <template v-slot:item.mode="{ item }">
-            {{ getModeLabel(item.mode) }}
+          <template v-slot:item.modality="{ item }">
+            {{ getModeLabel(item.modality) }}
           </template>
           <template v-slot:item.actions="{ item }">
             <v-btn icon="mdi-pencil" size="small" variant="text" @click="openEditDialog(item)" />
@@ -174,7 +195,7 @@ onMounted(() => {
               @click="openDeleteDialog(item)"
             />
           </template>
-        </v-data-table>
+        </v-data-table-server>
       </v-card-text>
     </v-card>
 
@@ -245,7 +266,7 @@ onMounted(() => {
               </v-col>
               <v-col cols="12" md="4">
                 <v-select
-                  v-model="formData.type"
+                  v-model="formData.course_type"
                   :items="typeOptions"
                   label="Tipo"
                   required
@@ -253,7 +274,7 @@ onMounted(() => {
               </v-col>
               <v-col cols="12" md="4">
                 <v-select
-                  v-model="formData.mode"
+                  v-model="formData.modality"
                   :items="modeOptions"
                   label="Modalidad"
                   required
@@ -261,7 +282,7 @@ onMounted(() => {
               </v-col>
               <v-col cols="12" md="4">
                 <v-select
-                  v-model="formData.profile"
+                  v-model="formData.course_profile"
                   :items="profileOptions"
                   label="Perfil"
                   required

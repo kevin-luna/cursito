@@ -10,9 +10,9 @@ export interface Course {
   end_date: string
   start_time: string
   end_time: string
-  type: number // 0 = diplomado, 1 = taller
-  mode: number // 0 = virtual, 1 = presencial
-  profile: number // 0 = formacion, 1 = actualización docente
+  course_type: number // 0 = diplomado, 1 = taller
+  modality: number // 0 = virtual, 1 = presencial
+  course_profile: number // 0 = formacion, 1 = actualización docente
   goal: string
   details?: string
 }
@@ -25,75 +25,78 @@ export interface CreateCourseRequest {
   end_date: string
   start_time: string
   end_time: string
-  type: number
-  mode: number
-  profile: number
+  course_type: number
+  modality: number
+  course_profile: number
   goal: string
   details?: string
+  instructors: string[] // Array of worker IDs
 }
 
 export interface UpdateCourseRequest extends CreateCourseRequest {}
 
 class CourseService {
-  async getAll(): Promise<Course[]> {
-    const response = await api.get<PaginatedResponse<Course>>('/courses')
-    return response.data.items
+  async getAll(page: number = 1, limit: number = 100): Promise<PaginatedResponse<Course>> {
+    const response = await api.get<PaginatedResponse<Course>>('/courses/', {
+      params: { page, limit }
+    })
+    return response.data
   }
 
   async getById(id: string): Promise<Course> {
-    const response = await api.get<Course>(`/courses/${id}`)
+    const response = await api.get<Course>(`/courses/${id}/`)
     return response.data
   }
 
   async create(data: CreateCourseRequest): Promise<Course> {
-    const response = await api.post<Course>('/courses', data)
+    const response = await api.post<Course>('/courses/', data)
     return response.data
   }
 
   async update(id: string, data: UpdateCourseRequest): Promise<Course> {
-    const response = await api.put<Course>(`/courses/${id}`, data)
+    const response = await api.put<Course>(`/courses/${id}/`, data)
     return response.data
   }
 
   async delete(id: string): Promise<void> {
-    await api.delete(`/courses/${id}`)
+    await api.delete(`/courses/${id}/`)
   }
 
   async getInstructors(courseId: string): Promise<any[]> {
-    const response = await api.get(`/courses/${courseId}/instructors`)
+    const response = await api.get(`/courses/${courseId}/instructors/`)
     return response.data
   }
 
   async addInstructor(courseId: string, workerId: string): Promise<void> {
-    await api.post(`/courses/${courseId}/instructors`, { worker_id: workerId })
+    await api.post(`/courses/${courseId}/instructors/`, { worker_id: workerId })
   }
 
   async removeInstructor(courseId: string, workerId: string): Promise<void> {
-    await api.delete(`/courses/${courseId}/instructors/${workerId}`)
+    await api.delete(`/courses/${courseId}/instructors/${workerId}/`)
   }
 
   async getEnrollments(courseId: string): Promise<any[]> {
-    const response = await api.get(`/courses/${courseId}/enrollments`)
+    const response = await api.get(`/courses/${courseId}/enrollments/`)
     return response.data
   }
 
   async getAttendances(courseId: string, date?: string): Promise<any[]> {
     const params = date ? { date } : {}
-    const response = await api.get(`/courses/${courseId}/attendances`, { params })
+    const response = await api.get(`/courses/${courseId}/attendances/`, { params })
     return response.data
   }
 
   async getSurveys(courseId: string): Promise<any[]> {
-    const response = await api.get(`/courses/${courseId}/surveys`)
+    const response = await api.get(`/courses/${courseId}/surveys/`)
     return response.data
   }
 
   async addSurvey(courseId: string, surveyId: string): Promise<void> {
-    await api.post(`/courses/${courseId}/surveys`, { survey_id: surveyId })
+    await api.post(`/courses/${courseId}/surveys/`, { survey_id: surveyId })
   }
 
   async removeSurvey(courseId: string, surveyId: string): Promise<void> {
-    await api.delete(`/courses/${courseId}/surveys/${surveyId}`)
+    await api.delete(`/courses/${courseId}/surveys/${surveyId}/`)
   }
 }
 
