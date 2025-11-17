@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router'
 import AvailableCoursesWorker from '@/components/worker/AvailableCoursesWorker.vue'
 import MyCoursesWorker from '@/components/worker/MyCoursesWorker.vue'
 import TeachingCoursesWorker from '@/components/worker/TeachingCoursesWorker.vue'
-import CreateCourseWorker from '@/components/worker/CreateCourseWorker.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -16,8 +15,7 @@ const selectedTab = ref('available-courses')
 const tabs = [
   { id: 'available-courses', title: 'Cursos Disponibles', icon: 'mdi-book-search' },
   { id: 'my-courses', title: 'Mis Inscripciones', icon: 'mdi-book-account' },
-  { id: 'teaching-courses', title: 'Cursos que Imparto', icon: 'mdi-teach' },
-  { id: 'create-course', title: 'Crear Curso', icon: 'mdi-plus-circle' },
+  { id: 'teaching-courses', title: 'Cursos que Imparto', icon: 'mdi-human-male-board' },
 ]
 
 const handleLogout = async () => {
@@ -70,7 +68,6 @@ const handleLogout = async () => {
         <AvailableCoursesWorker v-if="selectedTab === 'available-courses'" />
         <MyCoursesWorker v-else-if="selectedTab === 'my-courses'" />
         <TeachingCoursesWorker v-else-if="selectedTab === 'teaching-courses'" />
-        <CreateCourseWorker v-else-if="selectedTab === 'create-course'" />
       </v-container>
     </v-main>
   </v-app>

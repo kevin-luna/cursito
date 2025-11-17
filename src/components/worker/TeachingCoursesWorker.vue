@@ -5,6 +5,7 @@ import enrollmentService from '@/services/enrollmentService'
 import attendanceService, { type BulkAttendanceRequest } from '@/services/attendanceService'
 import surveyService, { type Survey } from '@/services/surveyService'
 import { useAuthStore } from '@/stores/auth'
+import CreateCourseWorker from './CreateCourseWorker.vue'
 
 const authStore = useAuthStore()
 const myCourses = ref<Course[]>([])
@@ -13,6 +14,7 @@ const loading = ref(false)
 const attendanceDialog = ref(false)
 const gradesDialog = ref(false)
 const surveysDialog = ref(false)
+const createCourseDialog = ref(false)
 const enrolledStudents = ref<any[]>([])
 const attendanceDate = ref('')
 const selectedStudents = ref<string[]>([])
@@ -124,13 +126,27 @@ const toggleSurvey = async (surveyId: string) => {
   }
 }
 
+const handleCourseCreated = () => {
+  createCourseDialog.value = false
+  loadMyCourses()
+}
+
 onMounted(loadMyCourses)
 </script>
 
 <template>
   <div>
     <v-card>
-      <v-card-title class="text-h5">Cursos que Imparto</v-card-title>
+      <v-card-title class="d-flex justify-space-between align-center">
+        <span class="text-h5">Cursos que Imparto</span>
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-plus-circle"
+          @click="createCourseDialog = true"
+        >
+          Crear Curso
+        </v-btn>
+      </v-card-title>
       <v-card-text>
         <v-row>
           <v-col v-for="course in myCourses" :key="course.id" cols="12" md="6" lg="4">
@@ -263,6 +279,19 @@ onMounted(loadMyCourses)
           <v-spacer />
           <v-btn @click="surveysDialog = false">Cerrar</v-btn>
         </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Dialog crear curso -->
+    <v-dialog v-model="createCourseDialog" max-width="900px" persistent>
+      <v-card>
+        <v-card-title class="d-flex justify-space-between align-center">
+          <span>Crear Nuevo Curso</span>
+          <v-btn icon="mdi-close" variant="text" @click="createCourseDialog = false"></v-btn>
+        </v-card-title>
+        <v-card-text>
+          <CreateCourseWorker @course-created="handleCourseCreated" />
+        </v-card-text>
       </v-card>
     </v-dialog>
   </div>
