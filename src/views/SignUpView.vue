@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import departmentService, { type Department } from '@/services/departmentService'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -24,18 +25,29 @@ const formValid = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
-// Lista de departamentos
-const departamentos = [
-  'Sistemas y Computación',
-  'Ingeniería Industrial',
-  'Ingeniería Electrónica',
-  'Ingeniería Mecánica',
-  'Ingeniería Química',
-  'Ciencias Básicas',
-  'Administración',
-  'Recursos Humanos',
-  'Servicios Escolares',
-]
+// Lista de departamentos desde la API
+const departamentos = ref<Department[]>([])
+const loadingDepartments = ref(false)
+
+// Cargar departamentos desde la API
+const fetchDepartments = async () => {
+  console.log("trayendo departamentos")
+  try {
+    loadingDepartments.value = true
+    departamentos.value = await departmentService.getAll()
+    console.log(departamentos.value)
+  } catch (error) {
+    console.error('Error al cargar departamentos:', error)
+    errorMessage.value = 'Error al cargar la lista de departamentos'
+  } finally {
+    loadingDepartments.value = false
+  }
+}
+
+// Cargar departamentos al montar el componente
+onMounted(() => {
+  fetchDepartments()
+})
 
 // Reglas de validación
 const nombreRules = [
@@ -72,7 +84,7 @@ const curpRules = [
   (v: string) => !!v || 'El CURP es requerido',
   (v: string) => v.length === 18 || 'El CURP debe tener exactamente 18 caracteres',
   (v: string) =>
-    /^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$/.test(v) || 'Formato de CURP inválido',
+    /^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[A-Z0-9]{2}$/.test(v) || 'Formato de CURP inválido',
 ]
 
 const sexoRules = [(v: string) => !!v || 'El sexo es requerido']
@@ -102,21 +114,21 @@ const handleSignUp = async () => {
     errorMessage.value = ''
     successMessage.value = ''
 
-    // Por ahora usamos el ID del departamento como string
-    // En una implementación completa, deberías hacer una llamada a /departments
-    // para obtener el ID real del departamento seleccionado
+    // Convertir sexo de M/F a número: F = 0 (mujer), M = 1 (hombre)
+    const sexoNumero = sexo.value === 'M' ? 1 : 0
+
     await authStore.register({
       email: email.value,
       password: password.value,
       name: nombreCompleto.value,
-      father_lastname: apellidoPaterno.value,
-      mother_lastname: apellidoMaterno.value,
-      department_id: departamento.value, // Esto debería ser un UUID en producción
+      father_surname: apellidoPaterno.value,
+      mother_surname: apellidoMaterno.value,
+      department_id: departamento.value,
       rfc: rfc.value,
       curp: curp.value,
-      sex: sexo.value,
-      phone: telefono.value,
-      role: 'teacher', // Por defecto, todos los nuevos usuarios son profesores
+      sex: sexoNumero,
+      telephone: telefono.value,
+      position: 0, // Por defecto, todos los nuevos usuarios son docentes (0)
     })
 
     successMessage.value = 'Registro exitoso. Redirigiendo...'
@@ -177,7 +189,7 @@ const goToLogin = () => {
               <v-text-field
                 v-model="nombreCompleto"
                 :rules="nombreRules"
-                label="Nombre completo"
+                label="Nombres"
                 prepend-inner-icon="mdi-account"
                 variant="outlined"
                 color="primary"
@@ -235,11 +247,15 @@ const goToLogin = () => {
                 v-model="departamento"
                 :rules="departamentoRules"
                 :items="departamentos"
+                item-title="name"
+                item-value="id"
                 label="Departamento"
                 prepend-inner-icon="mdi-domain"
                 variant="outlined"
                 color="primary"
                 class="mb-2 mt-4"
+                :loading="loadingDepartments"
+                :disabled="loadingDepartments"
               ></v-select>
 
               <!-- RFC y CURP en dos columnas -->

@@ -11,7 +11,7 @@ export interface LoginResponse {
   expires_in: number
   worker_id: string
   email: string
-  role: string | number // 0 = docente, 1 = admin/jefe de departamento
+  position: string | number // 0 = docente, 1 = admin/jefe de departamento
   department_id: string
 }
 
@@ -19,28 +19,28 @@ export interface RegisterRequest {
   email: string
   password: string
   name: string
-  father_lastname: string
-  mother_lastname: string
+  father_surname: string
+  mother_surname: string
   department_id: string
   rfc: string
   curp: string
-  sex: string
-  phone: string
-  role?: string
+  sex: number
+  telephone: string
+  position?: number
 }
 
 export interface Worker {
   id: string
   email: string
   name: string
-  father_lastname: string
-  mother_lastname: string
-  role: string | number // 0 = docente, 1 = admin/jefe de departamento
+  father_surname: string
+  mother_surname: string
+  position: string | number // 0 = docente, 1 = admin/jefe de departamento
   department_id: string
   rfc: string
   curp: string
-  sex: string
-  phone: string
+  sex: number
+  telephone: string
 }
 
 export interface ChangePasswordRequest {
