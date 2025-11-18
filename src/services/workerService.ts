@@ -1,5 +1,6 @@
 import api from './api'
 import type { Worker } from './authService'
+import type { Course } from './courseService'
 import type { PaginatedResponse } from './types'
 
 export interface UpdateWorkerRequest {
@@ -39,6 +40,12 @@ class WorkerService {
     const response = await api.get<PaginatedResponse<Worker>>(`/workers/department/${departmentId}`)
     return response.data.items
   }
+
+  async getCourses(workerId: string, courseType: 'teaching' | 'enrolled'): Promise<Course[]> {
+    const response = await api.get<PaginatedResponse<Course>>(`/workers/${workerId}/courses`, {params: {courseType: courseType}})
+    return response.data.items
+  }
+
 }
 
 export default new WorkerService()

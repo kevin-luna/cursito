@@ -6,6 +6,7 @@ import attendanceService, { type BulkAttendanceRequest } from '@/services/attend
 import surveyService, { type Survey } from '@/services/surveyService'
 import { useAuthStore } from '@/stores/auth'
 import CreateCourseWorker from './CreateCourseWorker.vue'
+import workerService from '@/services/workerService'
 
 const authStore = useAuthStore()
 const myCourses = ref<Course[]>([])
@@ -24,7 +25,7 @@ const assignedSurveys = ref<Survey[]>([])
 const loadMyCourses = async () => {
   loading.value = true
   try {
-    const allCourses = await courseService.getAll()
+    const allCourses = await workerService.getCourses(authStore.user?.id, 'teaching')
     const myCoursesData: Course[] = []
 
     for (const course of allCourses) {
@@ -44,7 +45,7 @@ const openAttendanceDialog = async (course: Course) => {
   selectedCourse.value = course
   loading.value = true
   try {
-    const enrollments = await courseService.getEnrollments(course.id)
+    const enrollments = await workerService.getCourses(authStore.user?.id, 'enrolled')
     enrolledStudents.value = enrollments
     attendanceDate.value = new Date().toISOString().split('T')[0] || ''
     selectedStudents.value = []

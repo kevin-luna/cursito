@@ -3,7 +3,11 @@ import { ref, onMounted } from 'vue'
 import enrollmentService, { type Enrollment } from '@/services/enrollmentService'
 import courseService, { type Course } from '@/services/courseService'
 import surveyService, { type Survey, type Question } from '@/services/surveyService'
+import workerService from '@/services/workerService'
+import authService from '@/services/authService'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
 const enrollments = ref<any[]>([])
 const loading = ref(false)
 const detailsDialog = ref(false)
@@ -19,7 +23,7 @@ const modeLabels: Record<number, string> = { 0: 'Virtual', 1: 'Presencial' }
 const loadEnrollments = async () => {
   loading.value = true
   try {
-    const myEnrollments = await enrollmentService.getMyEnrollments()
+    const myEnrollments = await workerService.getCourses(authStore.user?.id, 'enrolled')
     const coursesData = await Promise.all(
       myEnrollments.map((e: Enrollment) => courseService.getById(e.course_id)),
     )
@@ -116,9 +120,9 @@ onMounted(loadEnrollments)
               <v-card-text>
                 <div class="mb-2">
                   <v-chip size="small" class="mr-2" color="primary">{{
-                    typeLabels[enrollment.course?.type]
+                    typeLabels[enrollment.course?.course_type]
                   }}</v-chip>
-                  <v-chip size="small">{{ modeLabels[enrollment.course?.mode] }}</v-chip>
+                  <v-chip size="small">{{ modeLabels[enrollment.course?.modality] }}</v-chip>
                 </div>
                 <div class="text-body-2 mt-2">
                   <strong>Inicia:</strong> {{ enrollment.course?.start_date }}

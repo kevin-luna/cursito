@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import courseService, { type Course } from '@/services/courseService'
 import enrollmentService from '@/services/enrollmentService'
 import { useAuthStore } from '@/stores/auth'
+import workerService from '@/services/workerService'
 
 const authStore = useAuthStore()
 const courses = ref<Course[]>([])
@@ -35,7 +36,7 @@ const loadCourses = async () => {
     const response = await courseService.getAll(page.value, itemsPerPage.value)
     courses.value = response.items
     totalItems.value = response.total_count
-    const myEnrollments = await enrollmentService.getMyEnrollments()
+    const myEnrollments = await workerService.getCourses(authStore.user?.id,'enrolled')
     enrolledCourses.value = myEnrollments.map((e) => e.course_id)
   } finally {
     loading.value = false
