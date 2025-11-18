@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import workerService from '@/services/workerService'
 
 const authStore = useAuthStore()
-const courses = ref<Course[]>([])
+const allCourses = ref<Course[]>([])
 const loading = ref(false)
 const detailsDialog = ref(false)
 const selectedCourse = ref<Course | null>(null)
@@ -22,11 +22,22 @@ const profileLabels: Record<number, string> = { 0: 'Formación', 1: 'Actualizaci
 
 const availableCourses = computed(() => {
   const today = new Date()
-  return courses.value.filter((course) => {
+  return allCourses.value.filter((course) => {
     const startDate = new Date(course.start_date)
     // Solo mostrar cursos que aún no han comenzado (próximos a comenzar)
     return startDate > today
   })
+})
+
+// Paginación frontend
+const paginatedCourses = computed(() => {
+  const start = (page.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return availableCourses.value.slice(start, end)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(availableCourses.value.length / itemsPerPage.value)
 })
 
 const loadCourses = async () => {
@@ -34,22 +45,18 @@ const loadCourses = async () => {
 
   loading.value = true
   try {
-    const allCourses = await courseService.getAll(page.value, itemsPerPage.value)
-    courses.value = allCourses
+    // Cargar todos los cursos (usar un límite alto para obtener todos)
+    const courses = await courseService.getAll(1, 1000)
+    allCourses.value = courses
     const myEnrollments = await workerService.getCourses(authStore.user.id, 'enrolled')
     enrolledCourses.value = myEnrollments.map((e) => e.id)
   } catch (error) {
     console.error('Error loading courses:', error)
-    courses.value = []
+    allCourses.value = []
   } finally {
     loading.value = false
   }
 }
-
-// Watch for page changes
-watch(page, () => {
-  loadCourses()
-})
 
 const isEnrolled = (courseId: string) => enrolledCourses.value.includes(courseId)
 
@@ -80,7 +87,7 @@ onMounted(loadCourses)
       <v-card-subtitle>Cursos próximos a comenzar en los que puedes inscribirte</v-card-subtitle>
       <v-card-text>
         <v-row>
-          <v-col v-for="course in availableCourses" :key="course.id" cols="12" md="6" lg="4">
+          <v-col v-for="course in paginatedCourses" :key="course.id" cols="12" md="6" lg="4">
             <v-card elevation="2" class="h-100">
               <v-card-title class="text-h6">{{ course.name }}</v-card-title>
               <v-card-subtitle>{{ course.target }}</v-card-subtitle>
@@ -120,15 +127,15 @@ onMounted(loadCourses)
           </v-col>
         </v-row>
 
-        <v-alert v-if="availableCourses.length === 0" type="info" class="mt-4">
+        <v-alert v-if="availableCourses.length === 0 && !loading" type="info" class="mt-4">
           No hay cursos disponibles para inscripción en este momento
         </v-alert>
 
         <!-- Paginación -->
-        <div v-if="courses.length >= itemsPerPage" class="d-flex justify-center mt-4">
+        <div v-if="totalPages > 1" class="d-flex justify-center mt-4">
           <v-pagination
             v-model="page"
-            :length="10"
+            :length="totalPages"
             :total-visible="7"
           ></v-pagination>
         </div>
