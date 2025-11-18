@@ -10,6 +10,7 @@ import EnrollmentsAdmin from '@/components/admin/EnrollmentsAdmin.vue'
 import AttendancesAdmin from '@/components/admin/AttendancesAdmin.vue'
 import GradesAdmin from '@/components/admin/GradesAdmin.vue'
 import SurveysAdmin from '@/components/admin/SurveysAdmin.vue'
+import UserProfile from '@/components/shared/UserProfile.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -18,6 +19,7 @@ const drawer = ref(true)
 const selectedTab = ref('courses')
 
 const tabs = [
+  { id: 'user-profile', title: 'Mi perfil', icon: 'mdi-account-circle'},
   { id: 'courses', title: 'Cursos', icon: 'mdi-school' },
   { id: 'workers', title: 'Trabajadores', icon: 'mdi-account-group' },
   { id: 'departments', title: 'Departamentos', icon: 'mdi-domain' },
@@ -89,6 +91,7 @@ onMounted(async () => {
         <AttendancesAdmin v-else-if="selectedTab === 'attendances'" />
         <GradesAdmin v-else-if="selectedTab === 'grades'" />
         <SurveysAdmin v-else-if="selectedTab === 'surveys'" />
+        <UserProfile v-else-if="selectedTab === 'user-profile'"/>
       </v-container>
     </v-main>
   </v-app>

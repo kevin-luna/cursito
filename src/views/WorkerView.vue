@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import AvailableCoursesWorker from '@/components/worker/AvailableCoursesWorker.vue'
 import MyCoursesWorker from '@/components/worker/MyCoursesWorker.vue'
 import TeachingCoursesWorker from '@/components/worker/TeachingCoursesWorker.vue'
+import UserProfile from '@/components/shared/UserProfile.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -13,6 +14,7 @@ const drawer = ref(true)
 const selectedTab = ref('available-courses')
 
 const tabs = [
+  { id: 'user-profile', title: 'Mi perfil', icon: 'mdi-account-circle'},
   { id: 'available-courses', title: 'Cursos Disponibles', icon: 'mdi-book-search' },
   { id: 'my-courses', title: 'Mis Inscripciones', icon: 'mdi-book-account' },
   { id: 'teaching-courses', title: 'Cursos que Imparto', icon: 'mdi-human-male-board' },
@@ -68,6 +70,7 @@ const handleLogout = async () => {
         <AvailableCoursesWorker v-if="selectedTab === 'available-courses'" />
         <MyCoursesWorker v-else-if="selectedTab === 'my-courses'" />
         <TeachingCoursesWorker v-else-if="selectedTab === 'teaching-courses'" />
+        <UserProfile v-else-if="selectedTab === 'user-profile'" />
       </v-container>
     </v-main>
   </v-app>

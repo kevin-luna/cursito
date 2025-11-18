@@ -4,14 +4,15 @@ import type { PaginatedResponse } from './types'
 
 export interface UpdateWorkerRequest {
   name?: string
-  father_lastname?: string
-  mother_lastname?: string
+  father_surname?: string
+  mother_surname?: string
   department_id?: string
   rfc?: string
   curp?: string
-  sex?: string
-  phone?: string
-  role?: string
+  sex?: number
+  telephone?: string
+  email?: string
+  position?: number
 }
 
 class WorkerService {
