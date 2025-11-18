@@ -21,11 +21,11 @@ export interface UpdatePeriodRequest {
 }
 
 class PeriodService {
-  async getAll(page: number = 1, limit: number = 100): Promise<PaginatedResponse<Period>> {
+  async getAll(page: number = 1, limit: number = 100): Promise<Period[]> {
     const response = await api.get<PaginatedResponse<Period>>('/periods/', {
       params: { page, limit }
     })
-    return response.data
+    return response.data.items
   }
 
   async getById(id: string): Promise<Period> {

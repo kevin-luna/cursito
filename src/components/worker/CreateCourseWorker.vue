@@ -24,11 +24,12 @@ const formData = ref<CreateCourseRequest>({
   end_date: '',
   start_time: '',
   end_time: '',
-  type: 0,
-  mode: 0,
-  profile: 0,
+  course_type: 0,
+  modality: 0,
+  course_profile: 0,
   goal: '',
   details: '',
+  instructors: [authStore.user?.id || '']
 })
 
 const typeOptions = [
@@ -51,6 +52,7 @@ const loadData = async () => {
   try {
     periods.value = await periodService.getAll()
     workers.value = await workerService.getAll()
+    console.log(`La informacion del usuario es: ${authStore.user?.id}`)
 
     // Cargar cursos creados por este trabajador
     const allCourses = await courseService.getAll()
@@ -78,11 +80,12 @@ const resetForm = () => {
     end_date: '',
     start_time: '',
     end_time: '',
-    type: 0,
-    mode: 0,
-    profile: 0,
+    course_type: 0,
+    modality: 0,
+    course_profile: 0,
     goal: '',
     details: '',
+    instructors: [authStore.user?.id || '']
   }
   editMode.value = false
   selectedCourseId.value = null
@@ -92,10 +95,7 @@ const createCourse = async () => {
   loading.value = true
   try {
     const newCourse = await courseService.create(formData.value)
-
-    // Agregar al trabajador actual como instructor
-    await courseService.addInstructor(newCourse.id, authStore.user!.id)
-
+    console.log(formData.value)
     alert('Curso creado exitosamente')
     resetForm()
     await loadData()
@@ -153,14 +153,7 @@ const saveInstructors = async () => {
     // Agregar nuevos instructores
     for (const workerId of additionalInstructors.value) {
       if (!currentIds.includes(workerId)) {
-        await courseService.addInstructor(selectedCourseId.value, workerId)
-      }
-    }
-
-    // Remover instructores desmarcados
-    for (const workerId of currentIds) {
-      if (!additionalInstructors.value.includes(workerId)) {
-        await courseService.removeInstructor(selectedCourseId.value, workerId)
+        formData.value.instructors.push(workerId)
       }
     }
 
@@ -214,13 +207,13 @@ onMounted(loadData)
               <v-text-field v-model="formData.end_time" label="Hora Fin" type="time" />
             </v-col>
             <v-col cols="12" md="4">
-              <v-select v-model="formData.type" :items="typeOptions" label="Tipo" />
+              <v-select v-model="formData.course_type" :items="typeOptions" label="Tipo" />
             </v-col>
             <v-col cols="12" md="4">
-              <v-select v-model="formData.mode" :items="modeOptions" label="Modalidad" />
+              <v-select v-model="formData.modality" :items="modeOptions" label="Modalidad" />
             </v-col>
             <v-col cols="12" md="4">
-              <v-select v-model="formData.profile" :items="profileOptions" label="Perfil" />
+              <v-select v-model="formData.course_profile" :items="profileOptions" label="Perfil" />
             </v-col>
             <v-col cols="12">
               <v-textarea v-model="formData.goal" label="Meta del Curso" rows="3" />
@@ -228,6 +221,7 @@ onMounted(loadData)
             <v-col cols="12">
               <v-textarea v-model="formData.details" label="Detalles" rows="3" />
             </v-col>
+            <v-btn class="ml-4" color="primary" @click="instructorsDialog=true">Instructores</v-btn>
           </v-row>
         </v-form>
       </v-card-text>
@@ -244,39 +238,6 @@ onMounted(loadData)
       </v-card-actions>
     </v-card>
 
-    <!-- Lista de mis cursos -->
-    <v-card>
-      <v-card-title class="text-h5">Mis Cursos Creados</v-card-title>
-      <v-card-text>
-        <v-list>
-          <v-list-item v-for="course in myCourses" :key="course.id">
-            <v-list-item-title>{{ course.name }}</v-list-item-title>
-            <v-list-item-subtitle>{{ course.target }}</v-list-item-subtitle>
-            <template v-slot:append>
-              <v-btn
-                icon="mdi-account-multiple-plus"
-                size="small"
-                variant="text"
-                @click="openInstructorsDialog(course)"
-              />
-              <v-btn icon="mdi-pencil" size="small" variant="text" @click="editCourse(course)" />
-              <v-btn
-                icon="mdi-delete"
-                size="small"
-                variant="text"
-                color="error"
-                @click="deleteCourse(course.id)"
-              />
-            </template>
-          </v-list-item>
-        </v-list>
-
-        <v-alert v-if="myCourses.length === 0" type="info" class="mt-4">
-          No has creado ningún curso aún
-        </v-alert>
-      </v-card-text>
-    </v-card>
-
     <!-- Dialog para agregar instructores -->
     <v-dialog v-model="instructorsDialog" max-width="500px">
       <v-card>
@@ -287,7 +248,7 @@ onMounted(loadData)
               <template v-slot:prepend>
                 <v-checkbox-btn v-model="additionalInstructors" :value="worker.id" />
               </template>
-              <v-list-item-title>{{ worker.name }} {{ worker.father_lastname }}</v-list-item-title>
+              <v-list-item-title>{{ worker.name }} {{ worker.father_surname }}</v-list-item-title>
               <v-list-item-subtitle>{{ worker.email }}</v-list-item-subtitle>
             </v-list-item>
           </v-list>

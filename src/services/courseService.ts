@@ -36,11 +36,11 @@ export interface CreateCourseRequest {
 export interface UpdateCourseRequest extends CreateCourseRequest {}
 
 class CourseService {
-  async getAll(page: number = 1, limit: number = 100): Promise<PaginatedResponse<Course>> {
+  async getAll(page: number = 1, limit: number = 100): Promise<Course[]> {
     const response = await api.get<PaginatedResponse<Course>>('/courses/', {
       params: { page, limit }
     })
-    return response.data
+    return response.data.items
   }
 
   async getById(id: string): Promise<Course> {
@@ -97,6 +97,16 @@ class CourseService {
 
   async removeSurvey(courseId: string, surveyId: string): Promise<void> {
     await api.delete(`/courses/${courseId}/surveys/${surveyId}/`)
+  }
+
+  async getCoursesByWorker(workerId: string): Promise<Course[]> {
+    const response = await api.get<PaginatedResponse<Course>>(`/instructors/worker/${workerId}/courses`)
+    return response.data.items
+  }
+
+  async getActiveCourses(): Promise<Course[]> {
+    const response = await api.get<PaginatedResponse<Course>>('/courses/active/')
+    return response.data.items
   }
 }
 
