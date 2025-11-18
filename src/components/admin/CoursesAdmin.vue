@@ -64,10 +64,10 @@ const getModeLabel = (mode: number) => modeOptions.find((m) => m.value === mode)
 const loadCourses = async () => {
   loading.value = true
   try {
-    const response = await courseService.getAll(page.value, itemsPerPage.value)
-    courses.value = response.items
-    totalItems.value = response.total_count
-    serverItemsLength.value = response.total_count
+    const allCourses = await courseService.getAll(page.value, itemsPerPage.value)
+    courses.value = allCourses
+    totalItems.value = allCourses.length
+    serverItemsLength.value = allCourses.length
   } catch (error) {
     console.error('Error al cargar cursos:', error)
   } finally {

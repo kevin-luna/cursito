@@ -16,40 +16,37 @@ const attendanceDialog = ref(false)
 const gradesDialog = ref(false)
 const surveysDialog = ref(false)
 const createCourseDialog = ref(false)
-const enrolledStudents = ref<any[]>([])
+const enrolledStudents = ref<Worker[]>([])
 const attendanceDate = ref('')
 const selectedStudents = ref<string[]>([])
 const availableSurveys = ref<Survey[]>([])
 const assignedSurveys = ref<Survey[]>([])
 
 const loadMyCourses = async () => {
+  if (!authStore.user?.id) return
+
   loading.value = true
   try {
-    const allCourses = await workerService.getCourses(authStore.user?.id, 'teaching')
-    const myCoursesData: Course[] = []
+    const userId = authStore.user.id
+    const allCourses = await workerService.getCourses(userId, 'teaching')
 
-    for (const course of allCourses) {
-      const instructors = await courseService.getInstructors(course.id)
-      if (instructors.some((i: any) => i.worker_id === authStore.user?.id)) {
-        myCoursesData.push(course)
-      }
-    }
-
-    myCourses.value = myCoursesData
+    myCourses.value = allCourses
   } finally {
     loading.value = false
   }
 }
 
 const openAttendanceDialog = async (course: Course) => {
+  if (!authStore.user?.id) return
+
   selectedCourse.value = course
   loading.value = true
+  attendanceDialog.value = true
   try {
-    const enrollments = await workerService.getCourses(authStore.user?.id, 'enrolled')
+    const enrollments = await courseService.getEnrollments(course.id)
     enrolledStudents.value = enrollments
     attendanceDate.value = new Date().toISOString().split('T')[0] || ''
     selectedStudents.value = []
-    attendanceDialog.value = true
   } finally {
     loading.value = false
   }
@@ -79,10 +76,10 @@ const saveAttendance = async () => {
 const openGradesDialog = async (course: Course) => {
   selectedCourse.value = course
   loading.value = true
+  gradesDialog.value = true
   try {
     const enrollments = await courseService.getEnrollments(course.id)
     enrolledStudents.value = enrollments
-    gradesDialog.value = true
   } finally {
     loading.value = false
   }
@@ -101,10 +98,10 @@ const updateGrade = async (enrollmentId: string, grade: number) => {
 const openSurveysDialog = async (course: Course) => {
   selectedCourse.value = course
   loading.value = true
+  surveysDialog.value = true
   try {
     availableSurveys.value = await surveyService.getAllSurveys()
     assignedSurveys.value = await courseService.getSurveys(course.id)
-    surveysDialog.value = true
   } finally {
     loading.value = false
   }
@@ -198,7 +195,7 @@ onMounted(loadMyCourses)
     </v-card>
 
     <!-- Dialog pase de lista -->
-    <v-dialog v-model="attendanceDialog" max-width="600px">
+    <!-- <v-dialog v-model="attendanceDialog" max-width="600px">
       <v-card>
         <v-card-title>Pase de Lista - {{ selectedCourse?.name }}</v-card-title>
         <v-card-text>
@@ -209,10 +206,10 @@ onMounted(loadMyCourses)
               <template v-slot:prepend>
                 <v-checkbox-btn
                   v-model="selectedStudents"
-                  :value="student.worker_id"
+                  :value="student.id"
                 ></v-checkbox-btn>
               </template>
-              <v-list-item-title>{{ student.worker_name }}</v-list-item-title>
+              <v-list-item-title>{{ student.name }}</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-card-text>
@@ -222,10 +219,10 @@ onMounted(loadMyCourses)
           <v-btn color="primary" :loading="loading" @click="saveAttendance">Guardar</v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog>
+    </v-dialog> -->
 
     <!-- Dialog calificaciones -->
-    <v-dialog v-model="gradesDialog" max-width="600px">
+    <!-- <v-dialog v-model="gradesDialog" max-width="600px">
       <v-card>
         <v-card-title>Asignar Calificaciones - {{ selectedCourse?.name }}</v-card-title>
         <v-card-text>
@@ -233,7 +230,7 @@ onMounted(loadMyCourses)
             <v-list-item v-for="student in enrolledStudents" :key="student.id">
               <v-row align="center">
                 <v-col cols="7">
-                  <v-list-item-title>{{ student.worker_name }}</v-list-item-title>
+                  <v-list-item-title>{{ student.name }}</v-list-item-title>
                 </v-col>
                 <v-col cols="5">
                   <v-text-field
@@ -255,10 +252,10 @@ onMounted(loadMyCourses)
           <v-btn @click="gradesDialog = false">Cerrar</v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog>
+    </v-dialog> -->
 
     <!-- Dialog gestión de encuestas -->
-    <v-dialog v-model="surveysDialog" max-width="600px">
+    <!-- <v-dialog v-model="surveysDialog" max-width="600px">
       <v-card>
         <v-card-title>Gestión de Encuestas - {{ selectedCourse?.name }}</v-card-title>
         <v-card-text>
@@ -281,10 +278,10 @@ onMounted(loadMyCourses)
           <v-btn @click="surveysDialog = false">Cerrar</v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog>
+    </v-dialog> -->
 
     <!-- Dialog crear curso -->
-    <v-dialog v-model="createCourseDialog" max-width="900px" persistent>
+    <!-- <v-dialog v-model="createCourseDialog" max-width="900px" persistent>
       <v-card>
         <v-card-title class="d-flex justify-space-between align-center">
           <span>Crear Nuevo Curso</span>
@@ -294,6 +291,6 @@ onMounted(loadMyCourses)
           <CreateCourseWorker @course-created="handleCourseCreated" />
         </v-card-text>
       </v-card>
-    </v-dialog>
+    </v-dialog> -->
   </div>
 </template>

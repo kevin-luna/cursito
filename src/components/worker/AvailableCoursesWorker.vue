@@ -14,8 +14,7 @@ const enrolledCourses = ref<string[]>([])
 
 // Pagination state
 const page = ref(1)
-const itemsPerPage = ref(20)
-const totalItems = ref(0)
+const itemsPerPage = ref(10)
 
 const typeLabels: Record<number, string> = { 0: 'Diplomado', 1: 'Taller' }
 const modeLabels: Record<number, string> = { 0: 'Virtual', 1: 'Presencial' }
@@ -31,13 +30,17 @@ const availableCourses = computed(() => {
 })
 
 const loadCourses = async () => {
+  if (!authStore.user?.id) return
+
   loading.value = true
   try {
-    const response = await courseService.getAll(page.value, itemsPerPage.value)
-    courses.value = response.items
-    totalItems.value = response.total_count
-    const myEnrollments = await workerService.getCourses(authStore.user?.id,'enrolled')
-    enrolledCourses.value = myEnrollments.map((e) => e.course_id)
+    const allCourses = await courseService.getAll(page.value, itemsPerPage.value)
+    courses.value = allCourses
+    const myEnrollments = await workerService.getCourses(authStore.user.id, 'enrolled')
+    enrolledCourses.value = myEnrollments.map((e) => e.id)
+  } catch (error) {
+    console.error('Error loading courses:', error)
+    courses.value = []
   } finally {
     loading.value = false
   }
@@ -122,10 +125,10 @@ onMounted(loadCourses)
         </v-alert>
 
         <!-- Paginación -->
-        <div v-if="totalItems > itemsPerPage" class="d-flex justify-center mt-4">
+        <div v-if="courses.length >= itemsPerPage" class="d-flex justify-center mt-4">
           <v-pagination
             v-model="page"
-            :length="Math.ceil(totalItems / itemsPerPage)"
+            :length="10"
             :total-visible="7"
           ></v-pagination>
         </div>

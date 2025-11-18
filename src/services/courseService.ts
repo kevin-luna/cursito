@@ -75,9 +75,9 @@ class CourseService {
     await api.delete(`/courses/${courseId}/instructors/${workerId}/`)
   }
 
-  async getEnrollments(courseId: string): Promise<any[]> {
+  async getEnrollments(courseId: string): Promise<Worker[]> {
     const response = await api.get(`/courses/${courseId}/enrollments/`)
-    return response.data
+    return response.data.items
   }
 
   async getAttendances(courseId: string, date?: string): Promise<any[]> {

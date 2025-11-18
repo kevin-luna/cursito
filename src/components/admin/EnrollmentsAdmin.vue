@@ -33,7 +33,7 @@ const loadEnrollments = async () => {
       return {
         ...enrollment,
         course_name: course?.name || 'N/A',
-        worker_name: worker ? `${worker.name} ${worker.father_lastname}` : 'N/A',
+        worker_name: worker ? `${worker.name} ${worker.father_surname}` : 'N/A',
       }
     })
   } finally {

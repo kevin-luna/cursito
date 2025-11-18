@@ -21,17 +21,17 @@ const typeLabels: Record<number, string> = { 0: 'Diplomado', 1: 'Taller' }
 const modeLabels: Record<number, string> = { 0: 'Virtual', 1: 'Presencial' }
 
 const loadEnrollments = async () => {
+  if (!authStore.user?.id) return
+
   loading.value = true
   try {
-    const myEnrollments = await workerService.getCourses(authStore.user?.id, 'enrolled')
-    const coursesData = await Promise.all(
-      myEnrollments.map((e: Enrollment) => courseService.getById(e.course_id)),
-    )
+    const myCourses = await workerService.getCourses(authStore.user.id, 'enrolled')
 
-    enrollments.value = myEnrollments.map((enrollment: Enrollment) => {
-      const course = coursesData.find((c: Course) => c.id === enrollment.course_id)
+    enrollments.value = myCourses.map((course: Course) => {
       return {
-        ...enrollment,
+        id: course.id,
+        worker_id: authStore.user!.id,
+        course_id: course.id,
         course,
       }
     })
