@@ -1,18 +1,24 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import courseService, { type CreateCourseRequest } from '@/services/courseService'
+import { ref, onMounted, watch } from 'vue'
+import courseService, { type CreateCourseRequest, type Course } from '@/services/courseService'
 import periodService, { type Period } from '@/services/periodService'
 import workerService from '@/services/workerService'
 import { useAuthStore } from '@/stores/auth'
 import type { Worker } from '@/services/authService'
 
+const props = defineProps<{
+  editMode: boolean
+  courseData?: Course | null
+}>()
+
+const emit = defineEmits<{
+  'course-created': []
+}>()
+
 const authStore = useAuthStore()
 const periods = ref<Period[]>([])
 const workers = ref<Worker[]>([])
 const loading = ref(false)
-const myCourses = ref<any[]>([])
-const editMode = ref(false)
-const selectedCourseId = ref<string | null>(null)
 const additionalInstructors = ref<string[]>([])
 const instructorsDialog = ref(false)
 
@@ -52,20 +58,6 @@ const loadData = async () => {
   try {
     periods.value = await periodService.getAll()
     workers.value = await workerService.getAll()
-    console.log(`La informacion del usuario es: ${authStore.user?.id}`)
-
-    // Cargar cursos creados por este trabajador
-    const allCourses = await courseService.getAll()
-    const myCoursesData = []
-
-    for (const course of allCourses) {
-      const instructors = await courseService.getInstructors(course.id)
-      if (instructors.some((i: any) => i.worker_id === authStore.user?.id)) {
-        myCoursesData.push({ ...course, instructors })
-      }
-    }
-
-    myCourses.value = myCoursesData
   } finally {
     loading.value = false
   }
@@ -87,83 +79,109 @@ const resetForm = () => {
     details: '',
     instructors: [authStore.user?.id || '']
   }
-  editMode.value = false
-  selectedCourseId.value = null
 }
 
+// Cargar datos del curso cuando se pasa courseData (modo edición)
+watch(
+  () => [props.courseData, props.editMode] as const,
+  ([newCourseData, isEditMode]) => {
+    console.log('Watch triggered - courseData:', newCourseData, 'editMode:', isEditMode)
+
+    if (newCourseData && isEditMode) {
+      console.log('Loading course data for editing:', newCourseData)
+      formData.value = {
+        period_id: newCourseData.period_id || '',
+        target: newCourseData.target || '',
+        name: newCourseData.name || '',
+        start_date: newCourseData.start_date || '',
+        end_date: newCourseData.end_date || '',
+        start_time: newCourseData.start_time || '',
+        end_time: newCourseData.end_time || '',
+        course_type: newCourseData.course_type ?? 0,
+        modality: newCourseData.modality ?? 0,
+        course_profile: newCourseData.course_profile ?? 0,
+        goal: newCourseData.goal || '',
+        details: newCourseData.details || '',
+        instructors: [authStore.user?.id || '']
+      }
+      console.log('Form data after loading:', formData.value)
+    } else if (!isEditMode) {
+      console.log('Resetting form (create mode)')
+      resetForm()
+    }
+  },
+  { immediate: true }
+)
+
 const createCourse = async () => {
+  console.log('createCourse called')
+  console.log('formData.value:', formData.value)
+
   loading.value = true
   try {
     const newCourse = await courseService.create(formData.value)
-    console.log(formData.value)
+    console.log('Course created:', newCourse)
     alert('Curso creado exitosamente')
     resetForm()
-    await loadData()
+    emit('course-created')
+  } catch (error) {
+    console.error('Error creating course:', error)
+    alert('Error al crear el curso: ' + error)
   } finally {
     loading.value = false
   }
-}
-
-const editCourse = (course: any) => {
-  editMode.value = true
-  selectedCourseId.value = course.id
-  formData.value = { ...course }
-  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const updateCourse = async () => {
-  if (!selectedCourseId.value) return
+  console.log('updateCourse called')
+  console.log('props.courseData:', props.courseData)
+  console.log('formData.value:', formData.value)
+
+  if (!props.courseData?.id) {
+    console.error('No course ID found!')
+    alert('Error: No se encontró el ID del curso')
+    return
+  }
+
   loading.value = true
   try {
-    await courseService.update(selectedCourseId.value, formData.value)
+    console.log('Updating course with ID:', props.courseData.id)
+    await courseService.update(props.courseData.id, formData.value)
     alert('Curso actualizado exitosamente')
     resetForm()
-    await loadData()
+    emit('course-created')
+  } catch (error) {
+    console.error('Error updating course:', error)
+    alert('Error al actualizar el curso: ' + error)
   } finally {
     loading.value = false
   }
 }
 
-const deleteCourse = async (courseId: string) => {
-  if (confirm('¿Está seguro de eliminar este curso?')) {
-    loading.value = true
-    try {
-      await courseService.delete(courseId)
-      await loadData()
-    } finally {
-      loading.value = false
-    }
-  }
-}
+// const openInstructorsDialog = () => {
+//   instructorsDialog.value = true
+// }
 
-const openInstructorsDialog = async (course: any) => {
-  selectedCourseId.value = course.id
-  const instructors = await courseService.getInstructors(course.id)
-  additionalInstructors.value = instructors.map((i: any) => i.worker_id)
-  instructorsDialog.value = true
-}
+// const saveInstructors = async () => {
+//   if (!props.courseData?.id) return
+//   loading.value = true
+//   try {
+//     const currentInstructors = await courseService.getInstructors(props.courseData.id)
+//     const currentIds = currentInstructors.map((i: any) => i.worker_id)
 
-const saveInstructors = async () => {
-  if (!selectedCourseId.value) return
-  loading.value = true
-  try {
-    const currentInstructors = await courseService.getInstructors(selectedCourseId.value)
-    const currentIds = currentInstructors.map((i: any) => i.worker_id)
+//     // Agregar nuevos instructores
+//     for (const workerId of additionalInstructors.value) {
+//       if (!currentIds.includes(workerId)) {
+//         formData.value.instructors.push(workerId)
+//       }
+//     }
 
-    // Agregar nuevos instructores
-    for (const workerId of additionalInstructors.value) {
-      if (!currentIds.includes(workerId)) {
-        formData.value.instructors.push(workerId)
-      }
-    }
-
-    alert('Instructores actualizados')
-    instructorsDialog.value = false
-    await loadData()
-  } finally {
-    loading.value = false
-  }
-}
+//     alert('Instructores actualizados')
+//     instructorsDialog.value = false
+//   } finally {
+//     loading.value = false
+//   }
+// }
 
 onMounted(loadData)
 </script>
@@ -173,7 +191,7 @@ onMounted(loadData)
     <!-- Formulario de creación/edición -->
     <v-card class="mb-6">
       <v-card-title class="text-h5">
-        {{ editMode ? 'Editar Curso' : 'Crear Nuevo Curso' }}
+        {{ props.editMode ? 'Editar Curso' : 'Crear Nuevo Curso' }}
       </v-card-title>
       <v-card-text>
         <v-form>
@@ -221,19 +239,19 @@ onMounted(loadData)
             <v-col cols="12">
               <v-textarea v-model="formData.details" label="Detalles" rows="3" />
             </v-col>
-            <v-btn class="ml-4" color="primary" @click="instructorsDialog=true">Instructores</v-btn>
+            <!-- <v-btn class="ml-4" color="primary" @click="instructorsDialog=true">Instructores</v-btn> -->
           </v-row>
         </v-form>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn v-if="editMode" @click="resetForm">Cancelar</v-btn>
+        <v-btn v-if="props.editMode" @click="resetForm">Cancelar</v-btn>
         <v-btn
           color="primary"
           :loading="loading"
-          @click="editMode ? updateCourse() : createCourse()"
+          @click="props.editMode ? updateCourse() : createCourse()"
         >
-          {{ editMode ? 'Actualizar' : 'Crear Curso' }}
+          {{ props.editMode ? 'Actualizar' : 'Crear Curso' }}
         </v-btn>
       </v-card-actions>
     </v-card>

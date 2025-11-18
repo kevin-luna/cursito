@@ -16,6 +16,7 @@ const attendanceDialog = ref(false)
 const gradesDialog = ref(false)
 const surveysDialog = ref(false)
 const createCourseDialog = ref(false)
+const editMode = ref(false)
 const enrolledStudents = ref<Worker[]>([])
 const attendanceDate = ref('')
 const selectedStudents = ref<string[]>([])
@@ -125,8 +126,40 @@ const toggleSurvey = async (surveyId: string) => {
 }
 
 const handleCourseCreated = () => {
+  editMode.value = false
+  selectedCourse.value = null
   createCourseDialog.value = false
   loadMyCourses()
+}
+
+const deleteCourse = async (course: Course) => {
+  loading.value = true
+  if (confirm('¿Está seguro de eliminar este curso? Se eliminará toda la información relacionada')) {
+    try {
+      await courseService.delete(course.id)
+      await loadMyCourses()
+    } finally {
+      loading.value = false
+    }
+  }
+}
+
+const openEditCourseDialog = (course: Course) => {
+  selectedCourse.value = course
+  editMode.value = true
+  createCourseDialog.value = true
+}
+
+const openCreateCourseDialog = () => {
+  selectedCourse.value = null
+  editMode.value = false
+  createCourseDialog.value = true
+}
+
+const closeCreateCourseDialog = () => {
+  selectedCourse.value = null
+  editMode.value = false
+  createCourseDialog.value = false
 }
 
 onMounted(loadMyCourses)
@@ -140,7 +173,7 @@ onMounted(loadMyCourses)
         <v-btn
           color="primary"
           prepend-icon="mdi-plus-circle"
-          @click="createCourseDialog = true"
+          @click="openCreateCourseDialog"
         >
           Crear Curso
         </v-btn>
@@ -148,8 +181,29 @@ onMounted(loadMyCourses)
       <v-card-text>
         <v-row>
           <v-col v-for="course in myCourses" :key="course.id" cols="12" md="6" lg="4">
-            <v-card elevation="2">
-              <v-card-title class="text-h6">{{ course.name }}</v-card-title>
+            <v-card elevation="2" class="position-relative">
+              <div class="position-absolute top-0 right-0 d-flex pa-2 z-10 gap-1">
+                <v-btn
+                  icon="mdi-pencil"
+                  size="small"
+                  variant="text"
+                  color="primary"
+                  @click="openEditCourseDialog(course)"
+                />
+
+                <v-btn
+                  icon="mdi-delete"
+                  size="small"
+                  variant="text"
+                  color="error"
+                  @click="deleteCourse(course)"
+                />
+              </div>
+
+              <v-card-title class="text-h6 pt-10">
+                {{ course.name }}
+              </v-card-title>
+
               <v-card-text>
                 <div class="text-body-2">
                   <strong>Inicia:</strong> {{ course.start_date }}
@@ -158,6 +212,7 @@ onMounted(loadMyCourses)
                   <strong>Termina:</strong> {{ course.end_date }}
                 </div>
               </v-card-text>
+
               <v-card-actions class="flex-wrap">
                 <v-btn
                   size="small"
@@ -167,6 +222,7 @@ onMounted(loadMyCourses)
                 >
                   Asistencia
                 </v-btn>
+
                 <v-btn
                   size="small"
                   color="success"
@@ -175,6 +231,7 @@ onMounted(loadMyCourses)
                 >
                   Calificar
                 </v-btn>
+
                 <v-btn
                   size="small"
                   color="info"
@@ -280,17 +337,20 @@ onMounted(loadMyCourses)
       </v-card>
     </v-dialog> -->
 
-    <!-- Dialog crear curso -->
-    <!-- <v-dialog v-model="createCourseDialog" max-width="900px" persistent>
+    <!-- Dialog crear/editar curso -->
+    <v-dialog v-model="createCourseDialog" max-width="900px" persistent>
       <v-card>
         <v-card-title class="d-flex justify-space-between align-center">
-          <span>Crear Nuevo Curso</span>
-          <v-btn icon="mdi-close" variant="text" @click="createCourseDialog = false"></v-btn>
+          <v-btn icon="mdi-close" variant="text" @click="closeCreateCourseDialog"></v-btn>
         </v-card-title>
         <v-card-text>
-          <CreateCourseWorker @course-created="handleCourseCreated" />
+          <CreateCourseWorker
+            :edit-mode="editMode"
+            :course-data="selectedCourse"
+            @course-created="handleCourseCreated"
+          />
         </v-card-text>
       </v-card>
-    </v-dialog> -->
+    </v-dialog>
   </div>
 </template>
