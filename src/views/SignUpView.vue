@@ -114,20 +114,30 @@ const handleSignUp = async () => {
     errorMessage.value = ''
     successMessage.value = ''
 
+    // Sanitizar todos los campos - eliminar espacios extra al inicio y final
+    const sanitizedNombre = nombreCompleto.value.trim()
+    const sanitizedApellidoPaterno = apellidoPaterno.value.trim()
+    const sanitizedApellidoMaterno = apellidoMaterno.value.trim()
+    const sanitizedEmail = email.value.trim().toLowerCase() // Convertir a minúsculas
+    const sanitizedRfc = rfc.value.trim()
+    const sanitizedCurp = curp.value.trim()
+    const sanitizedTelefono = telefono.value.trim()
+    const sanitizedPassword = password.value.trim()
+
     // Convertir sexo de M/F a número: F = 0 (mujer), M = 1 (hombre)
     const sexoNumero = sexo.value === 'M' ? 1 : 0
 
     await authStore.register({
-      email: email.value,
-      password: password.value,
-      name: nombreCompleto.value,
-      father_surname: apellidoPaterno.value,
-      mother_surname: apellidoMaterno.value,
+      email: sanitizedEmail,
+      password: sanitizedPassword,
+      name: sanitizedNombre,
+      father_surname: sanitizedApellidoPaterno,
+      mother_surname: sanitizedApellidoMaterno,
       department_id: departamento.value,
-      rfc: rfc.value,
-      curp: curp.value,
+      rfc: sanitizedRfc,
+      curp: sanitizedCurp,
       sex: sexoNumero,
-      telephone: telefono.value,
+      telephone: sanitizedTelefono,
       position: 0, // Por defecto, todos los nuevos usuarios son docentes (0)
     })
 
@@ -196,6 +206,7 @@ const goToLogin = () => {
                 class="mb-2"
                 counter="45"
                 maxlength="45"
+                required
               ></v-text-field>
 
               <!-- Apellidos en dos columnas -->
@@ -211,6 +222,7 @@ const goToLogin = () => {
                     class="mb-2"
                     counter="40"
                     maxlength="40"
+                    required
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12" md="6">
@@ -224,6 +236,7 @@ const goToLogin = () => {
                     class="mb-2"
                     counter="40"
                     maxlength="40"
+                    required
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -240,6 +253,7 @@ const goToLogin = () => {
                 type="email"
                 hint="Debe terminar en @veracruz.tecnm.mx"
                 persistent-hint
+                required
               ></v-text-field>
 
               <!-- Departamento -->
@@ -256,6 +270,7 @@ const goToLogin = () => {
                 class="mb-2 mt-4"
                 :loading="loadingDepartments"
                 :disabled="loadingDepartments"
+                required
               ></v-select>
 
               <!-- RFC y CURP en dos columnas -->
@@ -273,6 +288,7 @@ const goToLogin = () => {
                     maxlength="13"
                     hint="13 caracteres"
                     @input="rfc = rfc.toUpperCase()"
+                    required
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12" md="6">
@@ -288,6 +304,7 @@ const goToLogin = () => {
                     maxlength="18"
                     hint="18 caracteres"
                     @input="curp = curp.toUpperCase()"
+                    required
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -301,6 +318,7 @@ const goToLogin = () => {
                     label="Sexo"
                     inline
                     color="primary"
+                    required
                   >
                     <v-radio label="Hombre" value="M">
                       <template #label>
@@ -333,6 +351,7 @@ const goToLogin = () => {
                     maxlength="10"
                     hint="10 dígitos"
                     type="tel"
+                    required
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -349,6 +368,7 @@ const goToLogin = () => {
                 variant="outlined"
                 color="primary"
                 class="mb-2"
+                required
               ></v-text-field>
 
               <!-- Confirmar Contraseña -->
@@ -363,6 +383,7 @@ const goToLogin = () => {
                 variant="outlined"
                 color="primary"
                 class="mb-4"
+                required
               ></v-text-field>
 
               <!-- Botón de registro -->
