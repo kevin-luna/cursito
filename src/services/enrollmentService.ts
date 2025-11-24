@@ -1,10 +1,11 @@
 import api from './api'
+import type { Course } from './courseService'
 import type { PaginatedResponse } from './types'
 
 export interface Enrollment {
   id: string
   worker_id: string
-  course_id: string
+  course: Course
   final_grade?: number
 }
 
@@ -56,7 +57,7 @@ class EnrollmentService {
   }
 
   async unenrollFromCourse(enrollmentId: string): Promise<void> {
-    await api.delete(`/enrollments/${enrollmentId}`)
+    await api.delete(`/enrollings/${enrollmentId}`)
   }
 }
 

@@ -25,14 +25,14 @@ const loadEnrollments = async () => {
 
   loading.value = true
   try {
-    const myCourses = await workerService.getCourses(authStore.user.id, 'enrolled')
+    const myCourses = await workerService.getEnrollments(authStore.user.id)
 
-    enrollments.value = myCourses.map((course: Course) => {
+    enrollments.value = myCourses.map((enrollment: Enrollment) => {
       return {
-        id: course.id,
+        id: enrollment.id,
         worker_id: authStore.user!.id,
-        course_id: course.id,
-        course,
+        course_id: enrollment.course.id,
+        course: enrollment.course,
       }
     })
   } finally {
