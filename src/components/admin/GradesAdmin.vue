@@ -26,7 +26,7 @@ const loadEnrollments = async () => {
     const workersData = await workerService.getAll()
 
     enrollments.value = data.map((enrollment: Enrollment) => {
-      const course = coursesData.find((c: Course) => c.id === enrollment.course_id)
+      const course = coursesData.find((c: Course) => c.id === enrollment.course.id)
       const worker = workersData.find((w: Worker) => w.id === enrollment.worker_id)
       return {
         ...enrollment,

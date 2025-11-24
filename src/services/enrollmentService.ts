@@ -20,7 +20,7 @@ export interface UpdateGradeRequest {
 
 class EnrollmentService {
   async getAll(): Promise<Enrollment[]> {
-    const response = await api.get<PaginatedResponse<Enrollment>>('/enrollments')
+    const response = await api.get<PaginatedResponse<Enrollment>>('/enrollings')
     return response.data.items
   }
 
@@ -35,7 +35,7 @@ class EnrollmentService {
   }
 
   async updateGrade(id: string, data: UpdateGradeRequest): Promise<Enrollment> {
-    const response = await api.put<Enrollment>(`/enrollments/${id}`, data)
+    const response = await api.put<Enrollment>(`/enrollings/${id}`, data)
     return response.data
   }
 
