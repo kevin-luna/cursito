@@ -12,8 +12,6 @@ const formData = ref<CreatePeriodRequest>({ name: '', start_date: '', end_date: 
 // Pagination state
 const page = ref(1)
 const itemsPerPage = ref(10)
-const totalItems = ref(0)
-const serverItemsLength = ref(0)
 
 const headers = [
   { title: 'Nombre', key: 'name' },
@@ -26,9 +24,7 @@ const loadPeriods = async () => {
   loading.value = true
   try {
     const response = await periodService.getAll(page.value, itemsPerPage.value)
-    periods.value = response.items
-    totalItems.value = response.total_count
-    serverItemsLength.value = response.total_count
+    periods.value = response
   } finally {
     loading.value = false
   }
@@ -83,7 +79,6 @@ onMounted(loadPeriods)
         :headers="headers"
         :items="periods"
         :loading="loading"
-        :items-length="serverItemsLength"
         v-model:page="page"
         v-model:items-per-page="itemsPerPage"
         :items-per-page-options="[5, 10, 25, 50, 100]"
