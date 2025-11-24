@@ -19,7 +19,11 @@ export interface UpdateWorkerRequest {
 
 class WorkerService {
   async getAll(): Promise<Worker[]> {
-    const response = await api.get<PaginatedResponse<Worker>>('/workers')
+    // Use a large limit to get all workers in one request
+    // If you have more than 1000 workers, consider implementing pagination in the UI
+    const response = await api.get<PaginatedResponse<Worker>>('/workers', {
+      params: { limit: 1000 }
+    })
     return response.data.items
   }
 

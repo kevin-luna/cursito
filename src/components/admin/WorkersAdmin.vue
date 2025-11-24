@@ -12,11 +12,16 @@ const deleteDialog = ref(false)
 const selectedWorker = ref<Worker | null>(null)
 
 const formData = ref({
+  rfc: '',
+  curp: '',
+  sex: 0,
+  telephone: '',
+  email: '',
   name: '',
   father_lastname: '',
   mother_lastname: '',
   department_id: '',
-  role: '',
+  position: 0,
 })
 
 const headers = [
@@ -29,9 +34,13 @@ const headers = [
 ]
 
 const roleOptions = [
-  { value: 'teacher', title: 'Docente' },
-  { value: 'admin', title: 'Administrador' },
-  { value: 'coordinator', title: 'Coordinador' },
+  { value: 0, title: 'Docente' },
+  { value: 1, title: 'Administrador' }
+]
+
+const sexOptions = [
+  { value: 0, title: 'Mujer' },
+  { value: 1, title: 'Hombre' }
 ]
 
 const loadWorkers = async () => {
@@ -56,11 +65,16 @@ const loadDepartments = async () => {
 const openEditDialog = (worker: Worker) => {
   selectedWorker.value = worker
   formData.value = {
+    rfc: worker.rfc,
+    curp: worker.curp,
+    sex: worker.sex,
+    telephone: worker.telephone,
+    email: worker.email,
     name: worker.name,
-    father_lastname: worker.father_lastname,
-    mother_lastname: worker.mother_lastname,
+    father_lastname: worker.father_surname,
+    mother_lastname: worker.mother_surname,
     department_id: worker.department_id,
-    role: worker.role,
+    position: worker.position,
   }
   dialog.value = true
 }
@@ -156,6 +170,47 @@ onMounted(() => {
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="formData.email"
+                  label="Correo Electrónico"
+                  type="email"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="formData.telephone"
+                  label="Teléfono"
+                  maxlength="10"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="formData.rfc"
+                  label="RFC"
+                  maxlength="13"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="formData.curp"
+                  label="CURP"
+                  maxlength="18"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="formData.sex"
+                  :items="sexOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Sexo"
+                  required
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
                 <v-select
                   v-model="formData.department_id"
                   :items="departments"
@@ -167,8 +222,10 @@ onMounted(() => {
               </v-col>
               <v-col cols="12" md="6">
                 <v-select
-                  v-model="formData.role"
+                  v-model="formData.position"
                   :items="roleOptions"
+                  item-title="title"
+                  item-value="value"
                   label="Rol"
                   required
                 ></v-select>
