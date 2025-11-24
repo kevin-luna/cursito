@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import courseService, { type Course, type CreateCourseRequest } from '@/services/courseService'
 import periodService, { type Period } from '@/services/periodService'
+import { readJsonConfigFile } from 'typescript'
 
 const courses = ref<Course[]>([])
 const periods = ref<Period[]>([])
@@ -78,7 +79,7 @@ const loadCourses = async () => {
 const loadPeriods = async () => {
   try {
     const response = await periodService.getAll(1, 100)
-    periods.value = response.items
+    periods.value = response
   } catch (error) {
     console.error('Error al cargar periodos:', error)
   }

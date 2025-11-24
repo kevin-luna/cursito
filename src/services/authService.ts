@@ -35,7 +35,7 @@ export interface Worker {
   name: string
   father_surname: string
   mother_surname: string
-  position: string | number // 0 = docente, 1 = admin/jefe de departamento
+  position: number // 0 = docente, 1 = admin/jefe de departamento
   department_id: string
   rfc: string
   curp: string
