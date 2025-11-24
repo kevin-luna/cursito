@@ -69,7 +69,7 @@ const enrollInCourse = async (courseId: string) => {
   if (confirm('¿Desea inscribirse a este curso?')) {
     loading.value = true
     try {
-      await enrollmentService.enrollInCourse(courseId)
+      await enrollmentService.enrollInCourse(authStore.user?.id,courseId)
       await loadCourses()
     } finally {
       loading.value = false

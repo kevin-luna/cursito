@@ -47,9 +47,10 @@ class EnrollmentService {
     return response.data
   }
 
-  async enrollInCourse(courseId: string): Promise<Enrollment> {
-    const response = await api.post<Enrollment>('/enrollments/enroll', {
-      course_id: courseId,
+  async enrollInCourse(workerId: string, courseId: string): Promise<Enrollment> {
+    const response = await api.post<Enrollment>('/enrollings', {
+      worker_id: workerId,
+      course_id: courseId
     })
     return response.data
   }
