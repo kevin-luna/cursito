@@ -178,6 +178,16 @@ const saveAllGrades = async () => {
     return
   }
 
+  // Validar que todas las calificaciones estén entre 0 y 100
+  const invalidGrades = Array.from(editedGrades.value.entries()).filter(
+    ([, grade]) => grade < 0 || grade > 100
+  )
+
+  if (invalidGrades.length > 0) {
+    alert('Las calificaciones deben estar entre 0 y 100')
+    return
+  }
+
   loading.value = true
   try {
     // Construir el array de calificaciones para el bulk update
