@@ -4,7 +4,7 @@ import courseService, { type Course } from '@/services/courseService'
 import enrollmentService, { type Enrollment } from '@/services/enrollmentService'
 import attendanceService, { type BulkAttendanceRequest } from '@/services/attendanceService'
 import surveyService, { type Survey } from '@/services/surveyService'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, type Worker as WorkerUser } from '@/stores/auth'
 import CreateCourseWorker from './CreateCourseWorker.vue'
 import workerService from '@/services/workerService'
 
@@ -22,6 +22,7 @@ const attendanceDate = ref('')
 const selectedStudents = ref<string[]>([])
 const availableSurveys = ref<Survey[]>([])
 const assignedSurveys = ref<Survey[]>([])
+const editedGrades = ref<Map<string, number>>(new Map())
 
 const loadMyCourses = async () => {
   if (!authStore.user?.id) return
@@ -78,6 +79,7 @@ const openGradesDialog = async (course: Course) => {
   selectedCourse.value = course
   loading.value = true
   gradesDialog.value = true
+  editedGrades.value.clear()
   try {
     const enrollments = await courseService.getEnrollments(course.id)
     enrolledStudents.value = enrollments
@@ -86,11 +88,42 @@ const openGradesDialog = async (course: Course) => {
   }
 }
 
-const updateGrade = async (enrollmentId: string, grade: number) => {
+const updateGradeLocally = (enrollmentId: string, grade: number) => {
+  editedGrades.value.set(enrollmentId, grade)
+}
+
+const getDisplayGrade = (enrollment: Enrollment): number => {
+  if (editedGrades.value.has(enrollment.id)) {
+    return editedGrades.value.get(enrollment.id)!
+  }
+  return enrollment.final_grade ?? 0
+}
+
+const saveAllGrades = async () => {
+  if (editedGrades.value.size === 0) {
+    alert('No hay cambios para guardar')
+    return
+  }
+
   loading.value = true
   try {
-    await enrollmentService.updateGrade(enrollmentId, { final_grade: grade })
-    alert('Calificación actualizada')
+    const promises = Array.from(editedGrades.value.entries()).map(([enrollmentId, grade]) =>
+      enrollmentService.updateGrade(enrollmentId, { final_grade: grade })
+    )
+    await Promise.all(promises)
+
+    // Actualizar la lista local
+    enrolledStudents.value = enrolledStudents.value.map(student => {
+      if (editedGrades.value.has(student.id)) {
+        return { ...student, final_grade: editedGrades.value.get(student.id) }
+      }
+      return student
+    })
+
+    editedGrades.value.clear()
+    alert('Calificaciones guardadas exitosamente')
+  } catch (error) {
+    alert('Error al guardar las calificaciones')
   } finally {
     loading.value = false
   }
@@ -229,7 +262,7 @@ onMounted(loadMyCourses)
                   prepend-icon="mdi-certificate"
                   @click="openGradesDialog(course)"
                 >
-                  Calificar
+                  Calificaciones
                 </v-btn>
 
                 <v-btn
@@ -252,7 +285,7 @@ onMounted(loadMyCourses)
     </v-card>
 
     <!-- Dialog pase de lista -->
-    <!-- <v-dialog v-model="attendanceDialog" max-width="600px">
+    <v-dialog v-model="attendanceDialog" max-width="600px">
       <v-card>
         <v-card-title>Pase de Lista - {{ selectedCourse?.name }}</v-card-title>
         <v-card-text>
@@ -266,7 +299,7 @@ onMounted(loadMyCourses)
                   :value="student.id"
                 ></v-checkbox-btn>
               </template>
-              <v-list-item-title>{{ student.name }}</v-list-item-title>
+              <v-list-item-title>{{ `${student.worker?.name || ''} ${student.worker?.father_surname || ''} ${student.worker?.mother_surname || ''}` }}</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-card-text>
@@ -276,43 +309,71 @@ onMounted(loadMyCourses)
           <v-btn color="primary" :loading="loading" @click="saveAttendance">Guardar</v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog> -->
+    </v-dialog>
 
     <!-- Dialog calificaciones -->
-    <!-- <v-dialog v-model="gradesDialog" max-width="600px">
+    <v-dialog v-model="gradesDialog" max-width="700px">
       <v-card>
-        <v-card-title>Asignar Calificaciones - {{ selectedCourse?.name }}</v-card-title>
-        <v-card-text>
-          <v-list>
-            <v-list-item v-for="student in enrolledStudents" :key="student.id">
-              <v-row align="center">
-                <v-col cols="7">
-                  <v-list-item-title>{{ student.name }}</v-list-item-title>
+        <v-card-title class="text-h5 pa-4">
+          Calificaciones - {{ selectedCourse?.name }}
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pa-0">
+          <v-alert v-if="enrolledStudents.length === 0" type="info" class="ma-4">
+            No hay trabajadores inscritos en este curso
+          </v-alert>
+          <v-list v-else class="py-0">
+            <v-list-item
+              v-for="(student, index) in enrolledStudents"
+              :key="student.id"
+              :class="{ 'bg-grey-lighten-4': index % 2 === 0 }"
+            >
+              <v-row align="center" no-gutters>
+                <v-col cols="7" class="py-2">
+                  <div class="text-subtitle-1 font-weight-medium">
+                    {{ `${student.worker?.name || ''} ${student.worker?.father_surname || ''} ${student.worker?.mother_surname || ''}` }}
+                  </div>
+                  <div v-if="(student.worker as unknown as WorkerUser)?.email" class="text-caption text-grey-darken-1">
+                    {{ (student.worker as unknown as WorkerUser).email }}
+                  </div>
                 </v-col>
-                <v-col cols="5">
+                <v-col cols="5" class="py-2">
                   <v-text-field
-                    :model-value="student.final_grade"
-                    @update:model-value="(val) => updateGrade(student.id, Number(val))"
+                    :model-value="getDisplayGrade(student)"
+                    @update:model-value="(val) => updateGradeLocally(student.id, Number(val))"
                     label="Calificación"
                     type="number"
                     min="0"
                     max="100"
                     density="compact"
+                    variant="outlined"
+                    hide-details
                   />
                 </v-col>
               </v-row>
             </v-list-item>
           </v-list>
         </v-card-text>
-        <v-card-actions>
+        <v-divider />
+        <v-card-actions class="pa-4">
           <v-spacer />
-          <v-btn @click="gradesDialog = false">Cerrar</v-btn>
+          <v-btn @click="gradesDialog = false" variant="text">
+            Cancelar
+          </v-btn>
+          <v-btn
+            color="primary"
+            :loading="loading"
+            :disabled="editedGrades.size === 0"
+            @click="saveAllGrades"
+          >
+            Guardar Calificaciones
+          </v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog> -->
+    </v-dialog>
 
     <!-- Dialog gestión de encuestas -->
-    <!-- <v-dialog v-model="surveysDialog" max-width="600px">
+    <v-dialog v-model="surveysDialog" max-width="600px">
       <v-card>
         <v-card-title>Gestión de Encuestas - {{ selectedCourse?.name }}</v-card-title>
         <v-card-text>
@@ -335,7 +396,7 @@ onMounted(loadMyCourses)
           <v-btn @click="surveysDialog = false">Cerrar</v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog> -->
+    </v-dialog>
 
     <!-- Dialog crear/editar curso -->
     <v-dialog v-model="createCourseDialog" max-width="900px" persistent>

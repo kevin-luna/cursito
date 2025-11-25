@@ -6,6 +6,9 @@ import authService, {
   type Worker,
 } from '@/services/authService'
 
+// Re-export Worker type for use in components
+export type { Worker }
+
 export const useAuthStore = defineStore('auth', () => {
   // State
   const user = ref<Worker | null>(null)
