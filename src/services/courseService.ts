@@ -84,7 +84,7 @@ class CourseService {
   async getAttendances(courseId: string, date?: string): Promise<Worker[]> {
     const params = date ? { "attendance_date": date } : {}
     const response = await api.get(`/courses/${courseId}/attendances/`, { params })
-    return response.data
+    return response.data.items || response.data
   }
 
   async getSurveys(courseId: string): Promise<any[]> {

@@ -18,6 +18,22 @@ export interface UpdateGradeRequest {
   final_grade: number
 }
 
+export interface WorkerGrade {
+  worker_id: string
+  final_grade: number
+}
+
+export interface BulkGradeUpdateRequest {
+  course_id: string
+  grades: WorkerGrade[]
+}
+
+export interface BulkGradeResponse {
+  updated: number
+  skipped: number
+  errors: string[]
+}
+
 class EnrollmentService {
   async getAll(): Promise<Enrollment[]> {
     const response = await api.get<PaginatedResponse<Enrollment>>('/enrollings')
@@ -58,6 +74,11 @@ class EnrollmentService {
 
   async unenrollFromCourse(enrollmentId: string): Promise<void> {
     await api.delete(`/enrollings/${enrollmentId}`)
+  }
+
+  async updateBulkGrades(data: BulkGradeUpdateRequest): Promise<BulkGradeResponse> {
+    const response = await api.post<BulkGradeResponse>('/enrollings/bulk-grades', data)
+    return response.data
   }
 }
 

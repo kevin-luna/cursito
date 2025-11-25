@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import courseService, { type Course } from '@/services/courseService'
 import enrollmentService, { type Enrollment } from '@/services/enrollmentService'
 import attendanceService, { type BulkAttendanceRequest } from '@/services/attendanceService'
@@ -23,6 +23,11 @@ const selectedStudents = ref<string[]>([])
 const availableSurveys = ref<Survey[]>([])
 const assignedSurveys = ref<Survey[]>([])
 const editedGrades = ref<Map<string, number>>(new Map())
+const attendedWorkers = ref<WorkerUser[]>([])
+
+// Computed properties para limitar el rango de fechas
+const minDate = computed(() => selectedCourse.value?.start_date || '')
+const maxDate = computed(() => selectedCourse.value?.end_date || '')
 
 const loadMyCourses = async () => {
   if (!authStore.user?.id) return
@@ -38,21 +43,78 @@ const loadMyCourses = async () => {
   }
 }
 
+const loadAttendancesByDate = async () => {
+  if (!selectedCourse.value || !attendanceDate.value || !attendanceDialog.value) {
+    console.log('Skipping load - missing prerequisites')
+    return
+  }
+
+  console.log('Loading attendances for date:', attendanceDate.value)
+
+  try {
+    const workers = await courseService.getAttendances(selectedCourse.value.id, attendanceDate.value)
+    attendedWorkers.value = workers as unknown as WorkerUser[]
+
+    console.log('Workers with attendance:', workers)
+    console.log('Enrolled students:', enrolledStudents.value)
+
+    // Marcar los estudiantes que ya tienen asistencia
+    const selected = enrolledStudents.value
+      .filter(enrollment => {
+        const workerData = enrollment.worker as unknown as WorkerUser
+        const hasAttendance = workers.some((w) => {
+          const workerFromList = w as unknown as WorkerUser
+          return workerFromList.id === workerData?.id
+        })
+        console.log(`Student ${workerData?.name} - has attendance: ${hasAttendance}`)
+        return hasAttendance
+      })
+      .map(enrollment => enrollment.id)
+
+    selectedStudents.value = selected
+    console.log('Selected students:', selected)
+  } catch (error) {
+    console.error('Error loading attendances:', error)
+    selectedStudents.value = []
+  }
+}
+
 const openAttendanceDialog = async (course: Course) => {
   if (!authStore.user?.id) return
 
   selectedCourse.value = course
-  loading.value = true
   attendanceDialog.value = true
+  loading.value = true
+
   try {
     const enrollments = await courseService.getEnrollments(course.id)
     enrolledStudents.value = enrollments
-    attendanceDate.value = new Date().toISOString().split('T')[0] || ''
-    selectedStudents.value = []
+
+    // Establecer la fecha actual o la fecha de inicio del curso si aún no ha comenzado
+    const today = new Date().toISOString().split('T')[0] || ''
+    const courseStartDate = course.start_date
+    const courseEndDate = course.end_date
+
+    if (today < courseStartDate) {
+      attendanceDate.value = courseStartDate
+    } else if (today > courseEndDate) {
+      attendanceDate.value = courseEndDate
+    } else {
+      attendanceDate.value = today
+    }
+
+    // Cargar asistencias de la fecha seleccionada (el watch se encargará de esto)
   } finally {
     loading.value = false
   }
 }
+
+// Watch para cargar asistencias cuando cambie la fecha
+watch(attendanceDate, async () => {
+  if (attendanceDialog.value && enrolledStudents.value.length > 0) {
+    await loadAttendancesByDate()
+  }
+})
 
 const saveAttendance = async () => {
   if (!selectedCourse.value || selectedStudents.value.length === 0) {
@@ -62,14 +124,25 @@ const saveAttendance = async () => {
 
   loading.value = true
   try {
+    // Convertir enrollment IDs a worker IDs
+    const workerIds = selectedStudents.value
+      .map(enrollmentId => {
+        const enrollment = enrolledStudents.value.find(e => e.id === enrollmentId)
+        const workerData = enrollment?.worker as unknown as WorkerUser
+        return workerData?.id
+      })
+      .filter((id): id is string => !!id)
+
     const data: BulkAttendanceRequest = {
       course_id: selectedCourse.value.id,
       date: attendanceDate.value,
-      worker_ids: selectedStudents.value,
+      worker_ids: workerIds,
     }
     await attendanceService.createBulk(data)
     alert('Asistencia registrada exitosamente')
-    attendanceDialog.value = false
+
+    // Recargar asistencias después de guardar
+    await loadAttendancesByDate()
   } finally {
     loading.value = false
   }
@@ -100,17 +173,29 @@ const getDisplayGrade = (enrollment: Enrollment): number => {
 }
 
 const saveAllGrades = async () => {
-  if (editedGrades.value.size === 0) {
+  if (!selectedCourse.value || editedGrades.value.size === 0) {
     alert('No hay cambios para guardar')
     return
   }
 
   loading.value = true
   try {
-    const promises = Array.from(editedGrades.value.entries()).map(([enrollmentId, grade]) =>
-      enrollmentService.updateGrade(enrollmentId, { final_grade: grade })
-    )
-    await Promise.all(promises)
+    // Construir el array de calificaciones para el bulk update
+    const grades = Array.from(editedGrades.value.entries()).map(([enrollmentId, grade]) => {
+      const student = enrolledStudents.value.find(s => s.id === enrollmentId)
+      const workerData = student?.worker as unknown as WorkerUser
+      return {
+        worker_id: workerData?.id || '',
+        final_grade: grade
+      }
+    }).filter(g => g.worker_id !== '')
+
+    const bulkData = {
+      course_id: selectedCourse.value.id,
+      grades
+    }
+
+    const result = await enrollmentService.updateBulkGrades(bulkData)
 
     // Actualizar la lista local
     enrolledStudents.value = enrolledStudents.value.map(student => {
@@ -121,7 +206,13 @@ const saveAllGrades = async () => {
     })
 
     editedGrades.value.clear()
-    alert('Calificaciones guardadas exitosamente')
+
+    // Mostrar resultado
+    if (result.errors.length > 0) {
+      alert(`Calificaciones guardadas: ${result.updated} actualizadas, ${result.skipped} omitidas.\nErrores: ${result.errors.join(', ')}`)
+    } else {
+      alert(`Calificaciones guardadas exitosamente: ${result.updated} actualizadas`)
+    }
   } catch (error) {
     alert('Error al guardar las calificaciones')
   } finally {
@@ -289,7 +380,14 @@ onMounted(loadMyCourses)
       <v-card>
         <v-card-title>Pase de Lista - {{ selectedCourse?.name }}</v-card-title>
         <v-card-text>
-          <v-text-field v-model="attendanceDate" label="Fecha" type="date" class="mb-4" />
+          <v-text-field
+            v-model="attendanceDate"
+            label="Fecha"
+            type="date"
+            class="mb-4"
+            :min="minDate"
+            :max="maxDate"
+          />
 
           <v-list>
             <v-list-item v-for="student in enrolledStudents" :key="student.id">
