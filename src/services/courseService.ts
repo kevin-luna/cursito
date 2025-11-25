@@ -1,4 +1,5 @@
 import api from './api'
+import type { Enrollment } from './enrollmentService'
 import type { PaginatedResponse } from './types'
 
 export interface Course {
@@ -75,7 +76,7 @@ class CourseService {
     await api.delete(`/courses/${courseId}/instructors/${workerId}/`)
   }
 
-  async getEnrollments(courseId: string): Promise<Worker[]> {
+  async getEnrollments(courseId: string): Promise<Enrollment[]> {
     const response = await api.get(`/courses/${courseId}/enrollments/`)
     return response.data.items
   }

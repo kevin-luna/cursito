@@ -8,7 +8,7 @@ import authService from '@/services/authService'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
-const enrollments = ref<any[]>([])
+const enrollments = ref<Enrollment[]>([])
 const loading = ref(false)
 const detailsDialog = ref(false)
 const surveysDialog = ref(false)
@@ -30,9 +30,8 @@ const loadEnrollments = async () => {
     enrollments.value = myCourses.map((enrollment: Enrollment) => {
       return {
         id: enrollment.id,
-        worker_id: authStore.user!.id,
-        course_id: enrollment.course.id,
         course: enrollment.course,
+        final_grade: enrollment.final_grade
       }
     })
   } finally {

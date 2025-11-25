@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import courseService, { type Course } from '@/services/courseService'
-import enrollmentService from '@/services/enrollmentService'
+import enrollmentService, { type Enrollment } from '@/services/enrollmentService'
 import attendanceService, { type BulkAttendanceRequest } from '@/services/attendanceService'
 import surveyService, { type Survey } from '@/services/surveyService'
 import { useAuthStore } from '@/stores/auth'
@@ -17,7 +17,7 @@ const gradesDialog = ref(false)
 const surveysDialog = ref(false)
 const createCourseDialog = ref(false)
 const editMode = ref(false)
-const enrolledStudents = ref<Worker[]>([])
+const enrolledStudents = ref<Enrollment[]>([])
 const attendanceDate = ref('')
 const selectedStudents = ref<string[]>([])
 const availableSurveys = ref<Survey[]>([])

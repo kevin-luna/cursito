@@ -4,8 +4,8 @@ import type { PaginatedResponse } from './types'
 
 export interface Enrollment {
   id: string
-  worker_id: string
-  course: Course
+  worker?: Worker
+  course?: Course
   final_grade?: number
 }
 
