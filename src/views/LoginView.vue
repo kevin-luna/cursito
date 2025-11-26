@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import AboutDialog from '@/components/shared/AboutDialog.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -11,6 +12,7 @@ const password = ref('')
 const showPassword = ref(false)
 const rememberMe = ref(false)
 const errorMessage = ref('')
+const showAboutDialog = ref(false)
 
 const emailRules = [
   (v: string) => !!v || 'El correo electrónico es requerido',
@@ -145,9 +147,22 @@ const handleLogin = async () => {
           <p class="text-caption text-grey">
             &copy; 2025 Cursito. Todos los derechos reservados.
           </p>
+          <v-btn
+            variant="text"
+            size="small"
+            color="primary"
+            @click="showAboutDialog = true"
+            class="mt-2"
+          >
+            <v-icon start size="small">mdi-information</v-icon>
+            Acerca de
+          </v-btn>
         </div>
       </v-col>
     </v-row>
+
+    <!-- Modal Acerca de -->
+    <AboutDialog v-model="showAboutDialog" />
   </v-container>
 </template>
 

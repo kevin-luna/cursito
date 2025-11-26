@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import departmentService, { type Department } from '@/services/departmentService'
+import AboutDialog from '@/components/shared/AboutDialog.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -24,6 +25,7 @@ const showConfirmPassword = ref(false)
 const formValid = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const showAboutDialog = ref(false)
 
 // Lista de departamentos desde la API
 const departamentos = ref<Department[]>([])
@@ -424,9 +426,22 @@ const goToLogin = () => {
           <p class="text-caption text-grey">
             &copy; 2025 Cursito. Todos los derechos reservados.
           </p>
+          <v-btn
+            variant="text"
+            size="small"
+            color="primary"
+            @click="showAboutDialog = true"
+            class="mt-2"
+          >
+            <v-icon start size="small">mdi-information</v-icon>
+            Acerca de
+          </v-btn>
         </div>
       </v-col>
     </v-row>
+
+    <!-- Modal Acerca de -->
+    <AboutDialog v-model="showAboutDialog" />
   </v-container>
 </template>
 

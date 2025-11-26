@@ -11,12 +11,14 @@ import AttendancesAdmin from '@/components/admin/AttendancesAdmin.vue'
 import GradesAdmin from '@/components/admin/GradesAdmin.vue'
 import SurveysAdmin from '@/components/admin/SurveysAdmin.vue'
 import UserProfile from '@/components/shared/UserProfile.vue'
+import AboutDialog from '@/components/shared/AboutDialog.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
 
 const drawer = ref(true)
 const selectedTab = ref('courses')
+const aboutDialog = ref(false)
 
 const tabs = [
   { id: 'user-profile', title: 'Mi perfil', icon: 'mdi-account-circle'},
@@ -69,6 +71,10 @@ onMounted(async () => {
 
       <template v-slot:append>
         <div class="pa-2">
+          <v-btn block @click="aboutDialog = true" color="info" variant="outlined" class="mb-2">
+            <v-icon start>mdi-information</v-icon>
+            Acerca de
+          </v-btn>
           <v-btn block @click="handleLogout" color="error"> Cerrar sesión </v-btn>
         </div>
       </template>
@@ -94,5 +100,7 @@ onMounted(async () => {
         <UserProfile v-else-if="selectedTab === 'user-profile'"/>
       </v-container>
     </v-main>
+
+    <AboutDialog v-model="aboutDialog" />
   </v-app>
 </template>
