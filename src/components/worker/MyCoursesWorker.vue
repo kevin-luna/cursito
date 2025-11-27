@@ -57,7 +57,9 @@ const unenroll = async (enrollmentId: string) => {
   }
 }
 
-const viewSurveys = async () => {
+const viewSurveys = async (course: Course | undefined) => {
+  if (!course) return
+  selectedCourse.value = course
   // Mostrar encuestas estáticas con IDs reales del sistema
   availableSurveys.value = [
     { id: '3d1fa6a2-6d4a-42fa-a474-68c83156f541', name: 'Evaluación de seguimiento', created_at: '2024-02-01' },
@@ -114,7 +116,7 @@ onMounted(loadEnrollments)
               </v-card-text>
               <v-card-actions>
                 <v-btn size="small" @click="viewDetails(enrollment.course)">Ver Detalles</v-btn>
-                <v-btn size="small" color="primary" @click="viewSurveys()">
+                <v-btn size="small" color="primary" @click="viewSurveys(enrollment.course)">
                   Encuestas
                 </v-btn>
                 <v-spacer />
@@ -189,19 +191,19 @@ onMounted(loadEnrollments)
           </v-list>
 
           <!-- Componente de Evaluación de seguimiento -->
-          <div v-else-if="selectedSurveyId === '3d1fa6a2-6d4a-42fa-a474-68c83156f541'">
+          <div v-else-if="selectedSurveyId === '3d1fa6a2-6d4a-42fa-a474-68c83156f541' && selectedCourse">
             <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="selectedSurveyId = null" class="mb-4">
               Volver a lista de encuestas
             </v-btn>
-            <FollowUpCSATForm />
+            <FollowUpCSATForm :course="selectedCourse" @close="closeSurveys" />
           </div>
 
           <!-- Componente de Encuesta de opinión -->
-          <div v-else-if="selectedSurveyId === 'c2a77b75-8552-4fe0-ab49-231803244ace'">
+          <div v-else-if="selectedSurveyId === 'c2a77b75-8552-4fe0-ab49-231803244ace' && selectedCourse">
             <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="selectedSurveyId = null" class="mb-4">
               Volver a lista de encuestas
             </v-btn>
-            <OpinionSurveyForm />
+            <OpinionSurveyForm :course="selectedCourse" @close="closeSurveys" />
           </div>
         </v-card-text>
       </v-card>

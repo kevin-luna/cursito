@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import surveyService, { type SubmitSurveyAnswersRequest } from '@/services/surveyService'
-import courseService, { type Course } from '@/services/courseService'
+import surveyService, { type SurveySubmitRequest } from '@/services/surveyService'
+import type { Course } from '@/services/courseService'
 import { useAuthStore } from '@/stores/auth'
+
+const FOLLOWUP_SURVEY_ID = '3d1fa6a2-6d4a-42fa-a474-68c83156f541'
+
+const props = defineProps<{
+  course: Course
+}>()
+
+const emit = defineEmits<{
+  close: []
+}>()
 
 const authStore = useAuthStore()
 const loading = ref(false)
-const myCourses = ref<Course[]>([])
-const selectedCourse = ref<Course | null>(null)
 const submitted = ref(false)
 const alreadyAnswered = ref(false)
-const step = ref(1)
 
 // Respuestas del formulario
 const formAnswers = ref({
@@ -62,17 +69,26 @@ const question4Options = [
   { key: 'h', text: 'Ofrecieron valores compatibles con los suyos' },
 ]
 
-const loadMyCourses = async () => {
-  loading.value = true
-  try {
-    if (!authStore.user?.id) return
-    const response = await courseService.getCoursesByWorker(authStore.user.id)
-    myCourses.value = response
-  } finally {
-    loading.value = false
+const checkIfAlreadyAnswered = async () => {
+  // Verificar si ya respondió esta encuesta para este curso
+  if (authStore.user?.id) {
+    loading.value = true
+    try {
+      const existingAnswers = await surveyService.getWorkerSurveyAnswers(
+        FOLLOWUP_SURVEY_ID,
+        authStore.user.id,
+        props.course.id
+      )
+      if (existingAnswers && existingAnswers.length > 0) {
+        alreadyAnswered.value = true
+      }
+    } catch (error) {
+      console.error('Error verificando respuestas:', error)
+    } finally {
+      loading.value = false
+    }
   }
 }
-
 
 const resetForm = () => {
   formAnswers.value = {
@@ -109,62 +125,60 @@ const isFormValid = computed(() => {
 })
 
 const submitSurvey = async () => {
-  if (!selectedCourse.value) return
+  if (!authStore.user?.id) return
 
   loading.value = true
   try {
     // Preparar respuestas en formato compatible con la API
     const answers = [
       {
-        question_id: 'follow-up-q1',
+        question_id: '35860b6b-24b7-4269-a4d5-5f3e9d7c6174',
         value: formAnswers.value.question1.toString(),
       },
       {
-        question_id: 'follow-up-q2',
+        question_id: '99d63963-cdc6-41b7-bcbf-01fe09ef6c88',
         value: formAnswers.value.question2.toString(),
       },
       {
-        question_id: 'follow-up-q3',
+        question_id: '0ef61261-a82e-43dc-b13e-642430980b5c',
         value: formAnswers.value.question3.toString(),
       },
       {
-        question_id: 'follow-up-q4',
+        question_id: 'f27d05f4-7bfa-4d41-ad34-b0154943d0f6',
         value: JSON.stringify(formAnswers.value.question4),
       },
       {
-        question_id: 'follow-up-obstacles',
+        question_id: '4b67a52c-ee25-4970-9b1a-8881eadf83a8',
         value: JSON.stringify(formAnswers.value.obstacles),
       },
       {
-        question_id: 'follow-up-comments',
+        question_id: 'b5673bc5-6d8e-46f6-9839-81dfa7b63ec2',
         value: formAnswers.value.comments,
       },
     ]
 
-    const request: SubmitSurveyAnswersRequest = {
-      course_id: selectedCourse.value.id,
+    const request: SurveySubmitRequest = {
+      worker_id: authStore.user.id,
+      course_id: props.course.id,
       answers,
     }
 
-    await surveyService.submitAnswers(request)
+    await surveyService.submitSurveyAnswers(FOLLOWUP_SURVEY_ID, request)
     submitted.value = true
+  } catch (error) {
+    console.error('Error al enviar evaluación:', error)
+    const err = error as { response?: { status?: number } }
+    if (err.response?.status === 409) {
+      alreadyAnswered.value = true
+    } else {
+      alert('Error al enviar la evaluación. Por favor intente de nuevo.')
+    }
   } finally {
     loading.value = false
   }
 }
 
-const goBack = () => {
-  selectedCourse.value = null
-  submitted.value = false
-}
-
-const resetAll = () => {
-  selectedCourse.value = null
-  submitted.value = false
-  resetForm()
-}
-
-onMounted(loadMyCourses)
+onMounted(checkIfAlreadyAnswered)
 </script>
 
 <template>
@@ -176,10 +190,25 @@ onMounted(loadMyCourses)
 
     <v-card-text class="pa-6">
 
-      <!-- Paso 2: Formulario de evaluación -->
-      <div v-if="!submitted">
+      <!-- Mensaje de ya respondido -->
+      <div v-if="alreadyAnswered" class="text-center py-8">
+        <v-icon size="80" color="warning">mdi-alert-circle</v-icon>
+        <h3 class="text-h5 mt-4">Ya has respondido esta evaluación</h3>
+        <p class="text-body-1 mt-2">
+          Ya has completado la evaluación de seguimiento para el curso "{{ course.name }}".
+        </p>
+        <p class="text-body-2 text-grey mt-2">
+          Solo puedes responder esta evaluación una vez por curso.
+        </p>
+        <v-btn color="primary" class="mt-6" @click="emit('close')">
+          Volver
+        </v-btn>
+      </div>
 
-        <h3 class="text-h5 mb-2">{{ selectedCourse?.name }}</h3>
+      <!-- Paso 2: Formulario de evaluación -->
+      <div v-if="!submitted && !alreadyAnswered">
+
+        <h3 class="text-h5 mb-2">{{ course.name }}</h3>
         <p class="text-subtitle-1 mb-6">
           Por favor, complete la siguiente evaluación de seguimiento sobre el curso.
         </p>
@@ -333,7 +362,7 @@ onMounted(loadMyCourses)
         <!-- Botones de acción -->
         <v-card-actions class="px-0">
           <v-spacer />
-          <v-btn variant="outlined" @click="goBack">Cancelar</v-btn>
+          <v-btn variant="outlined" @click="emit('close')">Cancelar</v-btn>
           <v-btn
             color="primary"
             size="large"
@@ -356,8 +385,8 @@ onMounted(loadMyCourses)
         <p class="text-body-2 text-grey mt-2">
           Su retroalimentación es muy importante para mejorar nuestros programas de capacitación.
         </p>
-        <v-btn color="primary" class="mt-6" @click="resetAll">
-          Evaluar otro curso
+        <v-btn color="primary" class="mt-6" @click="emit('close')">
+          Cerrar
         </v-btn>
       </div>
     </v-card-text>
