@@ -49,6 +49,12 @@ export interface SubmitSurveyAnswersRequest {
   answers: { question_id: string; value: string }[]
 }
 
+export interface SurveySubmitRequest {
+  worker_id: string
+  course_id: string
+  answers: { question_id: string; value: string }[]
+}
+
 class SurveyService {
   // Surveys
   async getAllSurveys(): Promise<Survey[]> {
@@ -107,7 +113,30 @@ class SurveyService {
   }
 
   async getAnswersByWorkerAndCourse(workerId: string, courseId: string): Promise<Answer[]> {
-    const response = await api.get<Answer[]>(`/answers/worker/${workerId}/course/${courseId}`)
+    const response = await api.get<PaginatedResponse<Answer>>(
+      `/answers/worker/${workerId}/course/${courseId}`,
+    )
+    return response.data.items
+  }
+
+  async getAnswersBySurvey(surveyId: string): Promise<Answer[]> {
+    const response = await api.get<PaginatedResponse<Answer>>(`/answers/survey/${surveyId}`)
+    return response.data.items
+  }
+
+  async getAnswersByQuestion(questionId: string): Promise<Answer[]> {
+    const response = await api.get<PaginatedResponse<Answer>>(`/answers/question/${questionId}`)
+    return response.data.items
+  }
+
+  // New endpoints for survey submission
+  async submitSurveyAnswers(surveyId: string, data: SurveySubmitRequest): Promise<Answer[]> {
+    const response = await api.post<Answer[]>(`/surveys/${surveyId}/submit`, data)
+    return response.data
+  }
+
+  async getWorkerSurveyAnswers(surveyId: string, workerId: string, courseId: string): Promise<Answer[]> {
+    const response = await api.get<Answer[]>(`/surveys/${surveyId}/worker/${workerId}/course/${courseId}/answers`)
     return response.data
   }
 }

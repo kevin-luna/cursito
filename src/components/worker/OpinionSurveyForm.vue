@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import surveyService, { type SubmitSurveyAnswersRequest } from '@/services/surveyService'
-import courseService, { type Course } from '@/services/courseService'
+import surveyService, { type SurveySubmitRequest } from '@/services/surveyService'
+import type { Course } from '@/services/courseService'
 import { useAuthStore } from '@/stores/auth'
+
+const OPINION_SURVEY_ID = 'c2a77b75-8552-4fe0-ab49-231803244ace'
+
+const props = defineProps<{
+  course: Course
+}>()
+
+const emit = defineEmits<{
+  close: []
+}>()
 
 const authStore = useAuthStore()
 const loading = ref(false)
-const myCourses = ref<Course[]>([])
-const selectedCourse = ref<Course | null>(null)
 const submitted = ref(false)
-const step = ref(1)
+const alreadyAnswered = ref(false)
 const currentSection = ref(0)
 
 // Secciones del formulario
@@ -97,22 +105,25 @@ const questions = {
   ],
 }
 
-const loadMyCourses = async () => {
-  loading.value = true
-  try {
-    if (!authStore.user?.id) return
-    const response = await courseService.getCoursesByWorker(authStore.user.id)
-    myCourses.value = response
-  } finally {
-    loading.value = false
+const checkIfAlreadyAnswered = async () => {
+  // Verificar si ya respondió esta encuesta para este curso
+  if (authStore.user?.id) {
+    loading.value = true
+    try {
+      const existingAnswers = await surveyService.getWorkerSurveyAnswers(
+        OPINION_SURVEY_ID,
+        authStore.user.id,
+        props.course.id
+      )
+      if (existingAnswers && existingAnswers.length > 0) {
+        alreadyAnswered.value = true
+      }
+    } catch (error) {
+      console.error('Error verificando respuestas:', error)
+    } finally {
+      loading.value = false
+    }
   }
-}
-
-const selectCourse = (course: Course) => {
-  selectedCourse.value = course
-  step.value = 2
-  currentSection.value = 0
-  resetForm()
 }
 
 const resetForm = () => {
@@ -171,60 +182,155 @@ const previousSection = () => {
 }
 
 const submitSurvey = async () => {
-  if (!selectedCourse.value) return
+  if (!authStore.user?.id) return
 
   loading.value = true
   try {
+    // IDs de las preguntas de la encuesta de opinión
+    const instructorQuestionIds = [
+      'c613744d-a2cc-4e5b-b0a4-c9e1488b7658', // q1
+      'd6ade9fe-b02a-4435-8254-00b009fcc8a6', // q2
+      '6577645c-96f6-495d-ae31-65727e029d68', // q3
+      'a2b6fbd2-e431-485d-910f-d1440c4fc6f4', // q4
+      '8775f5a8-d88a-46c1-9eb8-9a44a1aee56a', // q5
+      '747f6e4a-1103-4fd3-91da-7743c623dd60', // q6
+      'e6b27138-4041-4253-a1fb-8a6c530ed06c', // q7
+    ]
+    const materialQuestionIds = [
+      '44c6af40-e6c3-4b01-90d6-7b1bc20f33d1', // q1
+      '2b884a85-b41e-4c91-8a42-c98a41583f5f', // q2
+      'e619993e-cc69-45bb-a990-6e3bf840dca7', // q3
+    ]
+    const courseQuestionIds = [
+      'f47b08ed-1f5b-4e4f-b0d4-d2446df19157', // q1
+      'c648f340-b4d4-4d8a-85bb-501314c4b83a', // q2
+      '8b0cc047-eb89-4409-a81a-ac481299369a', // q3
+      'e4e69b3d-a4e2-4c4b-8991-d38071d9a20f', // q4
+    ]
+    const infrastructureQuestionIds = [
+      'c16802fa-af4a-4855-bb20-f20ceaa2f28e', // q1
+      '43292b9b-14d1-40ca-96a9-77bc88f49128', // q2
+      'f2665c3d-d0d5-405d-ac73-533c3bc41d29', // q3
+      'a3326530-b3f4-4122-a38f-bf2b231b0de0', // q4
+      'cba33950-6190-4401-a749-26dff08cb6ab', // q5
+      '4e376ddf-922b-4d57-8551-0cd679d218db', // q6
+    ]
+    const commentsQuestionId = '085773da-7b07-4619-8178-cdffcb5ea7dc'
+
     const answers = [
-      // Instructor
-      ...Object.entries(formAnswers.value.instructor).map(([key, value]) => ({
-        question_id: `opinion-instructor-${key}`,
-        value: value.toString(),
-      })),
-      // Material
-      ...Object.entries(formAnswers.value.material).map(([key, value]) => ({
-        question_id: `opinion-material-${key}`,
-        value: value.toString(),
-      })),
-      // Course
-      ...Object.entries(formAnswers.value.course).map(([key, value]) => ({
-        question_id: `opinion-course-${key}`,
-        value: value.toString(),
-      })),
-      // Infrastructure
-      ...Object.entries(formAnswers.value.infrastructure).map(([key, value]) => ({
-        question_id: `opinion-infrastructure-${key}`,
-        value: value.toString(),
-      })),
+      // Instructor (7 preguntas)
+      {
+        question_id: instructorQuestionIds[0],
+        value: formAnswers.value.instructor.q1.toString(),
+      },
+      {
+        question_id: instructorQuestionIds[1],
+        value: formAnswers.value.instructor.q2.toString(),
+      },
+      {
+        question_id: instructorQuestionIds[2],
+        value: formAnswers.value.instructor.q3.toString(),
+      },
+      {
+        question_id: instructorQuestionIds[3],
+        value: formAnswers.value.instructor.q4.toString(),
+      },
+      {
+        question_id: instructorQuestionIds[4],
+        value: formAnswers.value.instructor.q5.toString(),
+      },
+      {
+        question_id: instructorQuestionIds[5],
+        value: formAnswers.value.instructor.q6.toString(),
+      },
+      {
+        question_id: instructorQuestionIds[6],
+        value: formAnswers.value.instructor.q7.toString(),
+      },
+      // Material (3 preguntas)
+      {
+        question_id: materialQuestionIds[0],
+        value: formAnswers.value.material.q1.toString(),
+      },
+      {
+        question_id: materialQuestionIds[1],
+        value: formAnswers.value.material.q2.toString(),
+      },
+      {
+        question_id: materialQuestionIds[2],
+        value: formAnswers.value.material.q3.toString(),
+      },
+      // Course (4 preguntas)
+      {
+        question_id: courseQuestionIds[0],
+        value: formAnswers.value.course.q1.toString(),
+      },
+      {
+        question_id: courseQuestionIds[1],
+        value: formAnswers.value.course.q2.toString(),
+      },
+      {
+        question_id: courseQuestionIds[2],
+        value: formAnswers.value.course.q3.toString(),
+      },
+      {
+        question_id: courseQuestionIds[3],
+        value: formAnswers.value.course.q4.toString(),
+      },
+      // Infrastructure (6 preguntas)
+      {
+        question_id: infrastructureQuestionIds[0],
+        value: formAnswers.value.infrastructure.q1.toString(),
+      },
+      {
+        question_id: infrastructureQuestionIds[1],
+        value: formAnswers.value.infrastructure.q2.toString(),
+      },
+      {
+        question_id: infrastructureQuestionIds[2],
+        value: formAnswers.value.infrastructure.q3.toString(),
+      },
+      {
+        question_id: infrastructureQuestionIds[3],
+        value: formAnswers.value.infrastructure.q4.toString(),
+      },
+      {
+        question_id: infrastructureQuestionIds[4],
+        value: formAnswers.value.infrastructure.q5.toString(),
+      },
+      {
+        question_id: infrastructureQuestionIds[5],
+        value: formAnswers.value.infrastructure.q6.toString(),
+      },
       // Comments
       {
-        question_id: 'opinion-comments',
+        question_id: commentsQuestionId,
         value: formAnswers.value.comments,
       },
     ]
 
-    const request: SubmitSurveyAnswersRequest = {
-      course_id: selectedCourse.value.id,
+    const request: SurveySubmitRequest = {
+      worker_id: authStore.user.id,
+      course_id: props.course.id,
       answers,
     }
 
-    await surveyService.submitAnswers(request)
+    await surveyService.submitSurveyAnswers(OPINION_SURVEY_ID, request)
     submitted.value = true
+  } catch (error) {
+    console.error('Error al enviar encuesta:', error)
+    const err = error as { response?: { status?: number } }
+    if (err.response?.status === 409) {
+      alreadyAnswered.value = true
+    } else {
+      alert('Error al enviar la encuesta. Por favor intente de nuevo.')
+    }
   } finally {
     loading.value = false
   }
 }
 
-
-const resetAll = () => {
-  step.value = 1
-  selectedCourse.value = null
-  submitted.value = false
-  currentSection.value = 0
-  resetForm()
-}
-
-onMounted(loadMyCourses)
+onMounted(checkIfAlreadyAnswered)
 </script>
 
 <template>
@@ -236,10 +342,25 @@ onMounted(loadMyCourses)
 
     <v-card-text class="pa-6">
 
-      <!-- Paso 2: Formulario de evaluación -->
-      <div v-if="!submitted">
+      <!-- Mensaje de ya respondido -->
+      <div v-if="alreadyAnswered" class="text-center py-8">
+        <v-icon size="80" color="warning">mdi-alert-circle</v-icon>
+        <h3 class="text-h5 mt-4">Ya has respondido esta encuesta</h3>
+        <p class="text-body-1 mt-2">
+          Ya has completado la encuesta de opinión para el curso "{{ course.name }}".
+        </p>
+        <p class="text-body-2 text-grey mt-2">
+          Solo puedes responder esta encuesta una vez por curso.
+        </p>
+        <v-btn color="primary" class="mt-6" @click="emit('close')">
+          Volver
+        </v-btn>
+      </div>
 
-        <h3 class="text-h5 mb-2">{{ selectedCourse?.name }}</h3>
+      <!-- Paso 2: Formulario de evaluación -->
+      <div v-if="!submitted && !alreadyAnswered">
+
+        <h3 class="text-h5 mb-2">{{ course.name }}</h3>
         <p class="text-subtitle-1 mb-4">
           Complete la encuesta de opinión sobre el curso.
         </p>
@@ -494,8 +615,8 @@ onMounted(loadMyCourses)
         <p class="text-body-2 text-grey mt-2">
           Su retroalimentación nos ayuda a mejorar la calidad de nuestros cursos.
         </p>
-        <v-btn color="primary" class="mt-6" @click="resetAll">
-          Evaluar otro curso
+        <v-btn color="primary" class="mt-6" @click="emit('close')">
+          Cerrar
         </v-btn>
       </div>
     </v-card-text>
