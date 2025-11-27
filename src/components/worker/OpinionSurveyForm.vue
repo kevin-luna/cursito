@@ -6,9 +6,14 @@ import { useAuthStore } from '@/stores/auth'
 
 const OPINION_SURVEY_ID = 'c2a77b75-8552-4fe0-ab49-231803244ace'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   course: Course
-}>()
+  workerId?: string
+  readOnly?: boolean
+}>(), {
+  workerId: undefined,
+  readOnly: false
+})
 
 const emit = defineEmits<{
   close: []
@@ -19,6 +24,7 @@ const loading = ref(false)
 const submitted = ref(false)
 const alreadyAnswered = ref(false)
 const currentSection = ref(0)
+const hasAnswers = ref(false)
 
 // Secciones del formulario
 const sections = [
@@ -106,23 +112,111 @@ const questions = {
 }
 
 const checkIfAlreadyAnswered = async () => {
-  // Verificar si ya respondió esta encuesta para este curso
-  if (authStore.user?.id) {
-    loading.value = true
-    try {
-      const existingAnswers = await surveyService.getWorkerSurveyAnswers(
-        OPINION_SURVEY_ID,
-        authStore.user.id,
-        props.course.id
-      )
-      if (existingAnswers && existingAnswers.length > 0) {
+  // Determinar qué worker ID usar (prop o usuario autenticado)
+  const targetWorkerId = props.workerId || authStore.user?.id
+  if (!targetWorkerId) return
+
+  loading.value = true
+  try {
+    const existingAnswers = await surveyService.getWorkerSurveyAnswers(
+      OPINION_SURVEY_ID,
+      targetWorkerId,
+      props.course.id
+    )
+
+    if (existingAnswers && existingAnswers.length > 0) {
+      hasAnswers.value = true
+
+      // Si está en modo readOnly, cargar las respuestas
+      if (props.readOnly) {
+        loadAnswersIntoForm(existingAnswers)
+      } else {
+        // Si no está en readOnly, marcar como ya respondido
         alreadyAnswered.value = true
       }
-    } catch (error) {
-      console.error('Error verificando respuestas:', error)
-    } finally {
-      loading.value = false
     }
+  } catch (error) {
+    console.error('Error verificando respuestas:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadAnswersIntoForm = (answers: any[]) => {
+  // Crear un mapa de question_id -> value para búsqueda rápida
+  const answerMap = new Map(answers.map(a => [a.question_id, a.value]))
+
+  // IDs de las preguntas
+  const instructorQuestionIds = [
+    'c613744d-a2cc-4e5b-b0a4-c9e1488b7658',
+    'd6ade9fe-b02a-4435-8254-00b009fcc8a6',
+    '6577645c-96f6-495d-ae31-65727e029d68',
+    'a2b6fbd2-e431-485d-910f-d1440c4fc6f4',
+    '8775f5a8-d88a-46c1-9eb8-9a44a1aee56a',
+    '747f6e4a-1103-4fd3-91da-7743c623dd60',
+    'e6b27138-4041-4253-a1fb-8a6c530ed06c',
+  ]
+  const materialQuestionIds = [
+    '44c6af40-e6c3-4b01-90d6-7b1bc20f33d1',
+    '2b884a85-b41e-4c91-8a42-c98a41583f5f',
+    'e619993e-cc69-45bb-a990-6e3bf840dca7',
+  ]
+  const courseQuestionIds = [
+    'f47b08ed-1f5b-4e4f-b0d4-d2446df19157',
+    'c648f340-b4d4-4d8a-85bb-501314c4b83a',
+    '8b0cc047-eb89-4409-a81a-ac481299369a',
+    'e4e69b3d-a4e2-4c4b-8991-d38071d9a20f',
+  ]
+  const infrastructureQuestionIds = [
+    'c16802fa-af4a-4855-bb20-f20ceaa2f28e',
+    '43292b9b-14d1-40ca-96a9-77bc88f49128',
+    'f2665c3d-d0d5-405d-ac73-533c3bc41d29',
+    'a3326530-b3f4-4122-a38f-bf2b231b0de0',
+    'cba33950-6190-4401-a749-26dff08cb6ab',
+    '4e376ddf-922b-4d57-8551-0cd679d218db',
+  ]
+  const commentsQuestionId = '085773da-7b07-4619-8178-cdffcb5ea7dc'
+
+  // Cargar instructor
+  instructorQuestionIds.forEach((id, index) => {
+    const value = answerMap.get(id)
+    if (value) {
+      const key = `q${index + 1}` as keyof typeof formAnswers.value.instructor
+      formAnswers.value.instructor[key] = parseInt(value)
+    }
+  })
+
+  // Cargar material
+  materialQuestionIds.forEach((id, index) => {
+    const value = answerMap.get(id)
+    if (value) {
+      const key = `q${index + 1}` as keyof typeof formAnswers.value.material
+      formAnswers.value.material[key] = parseInt(value)
+    }
+  })
+
+  // Cargar course
+  courseQuestionIds.forEach((id, index) => {
+    const value = answerMap.get(id)
+    if (value) {
+      const key = `q${index + 1}` as keyof typeof formAnswers.value.course
+      formAnswers.value.course[key] = parseInt(value)
+    }
+  })
+
+  // Cargar infrastructure
+  infrastructureQuestionIds.forEach((id, index) => {
+    const value = answerMap.get(id)
+    if (value) {
+      const key = `q${index + 1}` as keyof typeof formAnswers.value.infrastructure
+      formAnswers.value.infrastructure[key] = parseInt(value)
+    }
+  })
+
+  // Cargar comentarios
+  const commentsValue = answerMap.get(commentsQuestionId)
+  if (commentsValue) {
+    formAnswers.value.comments = commentsValue
   }
 }
 
@@ -342,8 +436,20 @@ onMounted(checkIfAlreadyAnswered)
 
     <v-card-text class="pa-6">
 
+      <!-- Mensaje cuando no hay respuestas en modo readOnly -->
+      <div v-if="readOnly && !hasAnswers && !loading" class="text-center py-8">
+        <v-icon size="80" color="info">mdi-information</v-icon>
+        <h3 class="text-h5 mt-4">Sin respuestas</h3>
+        <p class="text-body-1 mt-2">
+          Este trabajador aún no ha respondido la encuesta de opinión para este curso.
+        </p>
+        <v-btn color="primary" class="mt-6" @click="emit('close')">
+          Volver
+        </v-btn>
+      </div>
+
       <!-- Mensaje de ya respondido -->
-      <div v-if="alreadyAnswered" class="text-center py-8">
+      <div v-else-if="alreadyAnswered" class="text-center py-8">
         <v-icon size="80" color="warning">mdi-alert-circle</v-icon>
         <h3 class="text-h5 mt-4">Ya has respondido esta encuesta</h3>
         <p class="text-body-1 mt-2">
@@ -357,8 +463,8 @@ onMounted(checkIfAlreadyAnswered)
         </v-btn>
       </div>
 
-      <!-- Paso 2: Formulario de evaluación -->
-      <div v-if="!submitted && !alreadyAnswered">
+      <!-- Formulario de evaluación -->
+      <div v-else-if="!submitted && (readOnly ? hasAnswers : !alreadyAnswered)">
 
         <h3 class="text-h5 mb-2">{{ course.name }}</h3>
         <p class="text-subtitle-1 mb-4">
@@ -419,6 +525,7 @@ onMounted(checkIfAlreadyAnswered)
                     v-model="formAnswers.instructor[`q${index + 1}`]"
                     inline
                     hide-details
+                    :disabled="readOnly"
                   >
                     <v-radio
                       v-for="option in likertOptions"
@@ -457,6 +564,7 @@ onMounted(checkIfAlreadyAnswered)
                     v-model="formAnswers.material[`q${index + 1}`]"
                     inline
                     hide-details
+                    :disabled="readOnly"
                   >
                     <v-radio
                       v-for="option in likertOptions"
@@ -495,6 +603,7 @@ onMounted(checkIfAlreadyAnswered)
                     v-model="formAnswers.course[`q${index + 1}`]"
                     inline
                     hide-details
+                    :disabled="readOnly"
                   >
                     <v-radio
                       v-for="option in likertOptions"
@@ -533,6 +642,7 @@ onMounted(checkIfAlreadyAnswered)
                     v-model="formAnswers.infrastructure[`q${index + 1}`]"
                     inline
                     hide-details
+                    :disabled="readOnly"
                   >
                     <v-radio
                       v-for="option in likertOptions"
@@ -567,12 +677,13 @@ onMounted(checkIfAlreadyAnswered)
               variant="outlined"
               rows="5"
               placeholder="Escriba aquí sus comentarios..."
+              :disabled="readOnly"
             />
           </v-card-text>
         </v-card>
 
         <!-- Botones de navegación -->
-        <v-card-actions class="px-0">
+        <v-card-actions v-if="!readOnly" class="px-0">
           <v-btn
             v-if="currentSection > 0"
             variant="outlined"

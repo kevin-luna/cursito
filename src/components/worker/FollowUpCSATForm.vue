@@ -6,9 +6,14 @@ import { useAuthStore } from '@/stores/auth'
 
 const FOLLOWUP_SURVEY_ID = '3d1fa6a2-6d4a-42fa-a474-68c83156f541'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   course: Course
-}>()
+  workerId?: string
+  readOnly?: boolean
+}>(), {
+  workerId: undefined,
+  readOnly: false
+})
 
 const emit = defineEmits<{
   close: []
@@ -18,6 +23,7 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const submitted = ref(false)
 const alreadyAnswered = ref(false)
+const hasAnswers = ref(false)
 
 // Respuestas del formulario
 const formAnswers = ref({
@@ -69,24 +75,77 @@ const question4Options = [
   { key: 'h', text: 'Ofrecieron valores compatibles con los suyos' },
 ]
 
-const checkIfAlreadyAnswered = async () => {
-  // Verificar si ya respondió esta encuesta para este curso
-  if (authStore.user?.id) {
-    loading.value = true
+const loadAnswersIntoForm = (answers: any[]) => {
+  const answerMap = new Map(answers.map(a => [a.question_id, a.value]))
+
+  // Question IDs for the follow-up survey
+  const question1Id = '35860b6b-24b7-4269-a4d5-5f3e9d7c6174'
+  const question2Id = '99d63963-cdc6-41b7-bcbf-01fe09ef6c88'
+  const question3Id = '0ef61261-a82e-43dc-b13e-642430980b5c'
+  const question4Id = 'f27d05f4-7bfa-4d41-ad34-b0154943d0f6'
+  const obstaclesId = '4b67a52c-ee25-4970-9b1a-8881eadf83a8'
+  const commentsId = 'b5673bc5-6d8e-46f6-9839-81dfa7b63ec2'
+
+  // Load Likert scale questions (1-3)
+  const q1Value = answerMap.get(question1Id)
+  if (q1Value) formAnswers.value.question1 = parseInt(q1Value)
+
+  const q2Value = answerMap.get(question2Id)
+  if (q2Value) formAnswers.value.question2 = parseInt(q2Value)
+
+  const q3Value = answerMap.get(question3Id)
+  if (q3Value) formAnswers.value.question3 = parseInt(q3Value)
+
+  // Load question 4 (multiple selection)
+  const q4Value = answerMap.get(question4Id)
+  if (q4Value) {
     try {
-      const existingAnswers = await surveyService.getWorkerSurveyAnswers(
-        FOLLOWUP_SURVEY_ID,
-        authStore.user.id,
-        props.course.id
-      )
-      if (existingAnswers && existingAnswers.length > 0) {
+      formAnswers.value.question4 = JSON.parse(q4Value)
+    } catch (e) {
+      console.error('Error parsing question4:', e)
+    }
+  }
+
+  // Load obstacles
+  const obstaclesValue = answerMap.get(obstaclesId)
+  if (obstaclesValue) {
+    try {
+      formAnswers.value.obstacles = JSON.parse(obstaclesValue)
+    } catch (e) {
+      console.error('Error parsing obstacles:', e)
+    }
+  }
+
+  // Load comments
+  const commentsValue = answerMap.get(commentsId)
+  if (commentsValue) formAnswers.value.comments = commentsValue
+}
+
+const checkIfAlreadyAnswered = async () => {
+  const targetWorkerId = props.workerId || authStore.user?.id
+  if (!targetWorkerId) return
+
+  loading.value = true
+  try {
+    const existingAnswers = await surveyService.getWorkerSurveyAnswers(
+      FOLLOWUP_SURVEY_ID,
+      targetWorkerId,
+      props.course.id
+    )
+
+    if (existingAnswers && existingAnswers.length > 0) {
+      hasAnswers.value = true
+
+      if (props.readOnly) {
+        loadAnswersIntoForm(existingAnswers)
+      } else {
         alreadyAnswered.value = true
       }
-    } catch (error) {
-      console.error('Error verificando respuestas:', error)
-    } finally {
-      loading.value = false
     }
+  } catch (error) {
+    console.error('Error verificando respuestas:', error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -205,8 +264,20 @@ onMounted(checkIfAlreadyAnswered)
         </v-btn>
       </div>
 
-      <!-- Paso 2: Formulario de evaluación -->
-      <div v-if="!submitted && !alreadyAnswered">
+      <!-- Mensaje sin respuestas en modo read-only -->
+      <div v-if="readOnly && !hasAnswers && !alreadyAnswered" class="text-center py-8">
+        <v-icon size="80" color="info">mdi-information</v-icon>
+        <h3 class="text-h5 mt-4">Sin respuestas</h3>
+        <p class="text-body-1 mt-2">
+          Este trabajador aún no ha completado la evaluación de seguimiento para el curso "{{ course.name }}".
+        </p>
+        <v-btn color="primary" class="mt-6" @click="emit('close')">
+          Volver
+        </v-btn>
+      </div>
+
+      <!-- Formulario de evaluación -->
+      <div v-else-if="!submitted && (readOnly ? hasAnswers : !alreadyAnswered)">
 
         <h3 class="text-h5 mb-2">{{ course.name }}</h3>
         <p class="text-subtitle-1 mb-6">
@@ -225,7 +296,7 @@ onMounted(checkIfAlreadyAnswered)
                 1. Los conocimientos adquiridos en el curso tienen aplicación en su ámbito laboral
                 en el corto y mediano plazo.
               </h4>
-              <v-radio-group v-model="formAnswers.question1" inline>
+              <v-radio-group v-model="formAnswers.question1" inline :disabled="readOnly">
                 <v-radio
                   v-for="option in likertOptions"
                   :key="option.value"
@@ -244,7 +315,7 @@ onMounted(checkIfAlreadyAnswered)
               <h4 class="text-h6 mb-4">
                 2. El curso le ayudó a mejorar el desempeño de sus funciones.
               </h4>
-              <v-radio-group v-model="formAnswers.question2" inline>
+              <v-radio-group v-model="formAnswers.question2" inline :disabled="readOnly">
                 <v-radio
                   v-for="option in likertOptions"
                   :key="option.value"
@@ -263,7 +334,7 @@ onMounted(checkIfAlreadyAnswered)
               <h4 class="text-h6 mb-4">
                 3. El curso le ayudó a considerar nuevas formas de trabajo.
               </h4>
-              <v-radio-group v-model="formAnswers.question3" inline>
+              <v-radio-group v-model="formAnswers.question3" inline :disabled="readOnly">
                 <v-radio
                   v-for="option in likertOptions"
                   :key="option.value"
@@ -297,6 +368,7 @@ onMounted(checkIfAlreadyAnswered)
               color="primary"
               hide-details
               class="mb-2"
+              :disabled="readOnly"
             />
           </v-card-text>
         </v-card>
@@ -317,6 +389,7 @@ onMounted(checkIfAlreadyAnswered)
               color="warning"
               hide-details
               class="mb-2"
+              :disabled="readOnly"
             />
             <v-checkbox
               v-model="formAnswers.obstacles.support"
@@ -324,6 +397,7 @@ onMounted(checkIfAlreadyAnswered)
               color="warning"
               hide-details
               class="mb-2"
+              :disabled="readOnly"
             />
             <v-checkbox
               v-model="formAnswers.obstacles.other"
@@ -331,6 +405,7 @@ onMounted(checkIfAlreadyAnswered)
               color="warning"
               hide-details
               class="mb-3"
+              :disabled="readOnly"
             />
             <v-text-field
               v-if="formAnswers.obstacles.other"
@@ -339,6 +414,7 @@ onMounted(checkIfAlreadyAnswered)
               variant="outlined"
               density="compact"
               class="mt-2"
+              :disabled="readOnly"
             />
           </v-card-text>
         </v-card>
@@ -355,12 +431,13 @@ onMounted(checkIfAlreadyAnswered)
               variant="outlined"
               rows="5"
               placeholder="Escriba aquí sus comentarios..."
+              :disabled="readOnly"
             />
           </v-card-text>
         </v-card>
 
         <!-- Botones de acción -->
-        <v-card-actions class="px-0">
+        <v-card-actions v-if="!readOnly" class="px-0">
           <v-spacer />
           <v-btn variant="outlined" @click="emit('close')">Cancelar</v-btn>
           <v-btn
