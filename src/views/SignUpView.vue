@@ -33,11 +33,9 @@ const loadingDepartments = ref(false)
 
 // Cargar departamentos desde la API
 const fetchDepartments = async () => {
-  console.log("trayendo departamentos")
   try {
     loadingDepartments.value = true
     departamentos.value = await departmentService.getAll()
-    console.log(departamentos.value)
   } catch (error) {
     console.error('Error al cargar departamentos:', error)
     errorMessage.value = 'Error al cargar la lista de departamentos'

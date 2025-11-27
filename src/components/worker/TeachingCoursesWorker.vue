@@ -3,10 +3,12 @@ import { ref, onMounted, watch, computed } from 'vue'
 import courseService, { type Course } from '@/services/courseService'
 import enrollmentService, { type Enrollment } from '@/services/enrollmentService'
 import attendanceService, { type BulkAttendanceRequest } from '@/services/attendanceService'
-import surveyService, { type Survey } from '@/services/surveyService'
+import surveyService from '@/services/surveyService'
 import { useAuthStore, type Worker as WorkerUser } from '@/stores/auth'
 import CreateCourseWorker from './CreateCourseWorker.vue'
 import workerService from '@/services/workerService'
+import OpinionSurveyForm from './OpinionSurveyForm.vue'
+import FollowUpCSATForm from './FollowUpCSATForm.vue'
 
 const authStore = useAuthStore()
 const myCourses = ref<Course[]>([])
@@ -20,10 +22,10 @@ const editMode = ref(false)
 const enrolledStudents = ref<Enrollment[]>([])
 const attendanceDate = ref('')
 const selectedStudents = ref<string[]>([])
-const availableSurveys = ref<Survey[]>([])
-const assignedSurveys = ref<Survey[]>([])
 const editedGrades = ref<Map<string, number>>(new Map())
 const attendedWorkers = ref<WorkerUser[]>([])
+const selectedWorkerForSurvey = ref<WorkerUser | null>(null)
+const selectedSurveyType = ref<'opinion' | 'followup' | null>(null)
 
 // Computed properties para limitar el rango de fechas
 const minDate = computed(() => selectedCourse.value?.start_date || '')
@@ -45,18 +47,12 @@ const loadMyCourses = async () => {
 
 const loadAttendancesByDate = async () => {
   if (!selectedCourse.value || !attendanceDate.value || !attendanceDialog.value) {
-    console.log('Skipping load - missing prerequisites')
     return
   }
-
-  console.log('Loading attendances for date:', attendanceDate.value)
 
   try {
     const workers = await courseService.getAttendances(selectedCourse.value.id, attendanceDate.value)
     attendedWorkers.value = workers as unknown as WorkerUser[]
-
-    console.log('Workers with attendance:', workers)
-    console.log('Enrolled students:', enrolledStudents.value)
 
     // Marcar los estudiantes que ya tienen asistencia
     const selected = enrolledStudents.value
@@ -66,13 +62,11 @@ const loadAttendancesByDate = async () => {
           const workerFromList = w as unknown as WorkerUser
           return workerFromList.id === workerData?.id
         })
-        console.log(`Student ${workerData?.name} - has attendance: ${hasAttendance}`)
         return hasAttendance
       })
       .map(enrollment => enrollment.id)
 
     selectedStudents.value = selected
-    console.log('Selected students:', selected)
   } catch (error) {
     console.error('Error loading attendances:', error)
     selectedStudents.value = []
@@ -232,31 +226,27 @@ const saveAllGrades = async () => {
 
 const openSurveysDialog = async (course: Course) => {
   selectedCourse.value = course
+  selectedWorkerForSurvey.value = null
+  selectedSurveyType.value = null
   loading.value = true
   surveysDialog.value = true
   try {
-    availableSurveys.value = await surveyService.getAllSurveys()
-    assignedSurveys.value = await courseService.getSurveys(course.id)
+    // Cargar estudiantes inscritos en el curso
+    const enrollments = await courseService.getEnrollments(course.id)
+    enrolledStudents.value = enrollments
   } finally {
     loading.value = false
   }
 }
 
-const toggleSurvey = async (surveyId: string) => {
-  if (!selectedCourse.value) return
-  const isAssigned = assignedSurveys.value.some((s) => s.id === surveyId)
+const viewWorkerSurvey = (worker: WorkerUser, surveyType: 'opinion' | 'followup') => {
+  selectedWorkerForSurvey.value = worker
+  selectedSurveyType.value = surveyType
+}
 
-  loading.value = true
-  try {
-    if (isAssigned) {
-      await courseService.removeSurvey(selectedCourse.value.id, surveyId)
-    } else {
-      await courseService.addSurvey(selectedCourse.value.id, surveyId)
-    }
-    assignedSurveys.value = await courseService.getSurveys(selectedCourse.value.id)
-  } finally {
-    loading.value = false
-  }
+const closeSurveyView = () => {
+  selectedWorkerForSurvey.value = null
+  selectedSurveyType.value = null
 }
 
 const handleCourseCreated = () => {
@@ -481,28 +471,98 @@ onMounted(loadMyCourses)
     </v-dialog>
 
     <!-- Dialog gestión de encuestas -->
-    <v-dialog v-model="surveysDialog" max-width="600px">
+    <v-dialog v-model="surveysDialog" max-width="1200px" persistent>
       <v-card>
-        <v-card-title>Gestión de Encuestas - {{ selectedCourse?.name }}</v-card-title>
+        <v-card-title class="d-flex justify-space-between align-center">
+          <span>Respuestas de Encuestas - {{ selectedCourse?.name }}</span>
+          <v-btn icon variant="text" @click="surveysDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
         <v-card-text>
-          <v-list>
-            <v-list-item v-for="survey in availableSurveys" :key="survey.id">
-              <v-list-item-title>{{ survey.name }}</v-list-item-title>
-              <template v-slot:append>
-                <v-switch
-                  :model-value="assignedSurveys.some((s) => s.id === survey.id)"
-                  @update:model-value="toggleSurvey(survey.id)"
-                  color="primary"
-                  :loading="loading"
-                />
-              </template>
-            </v-list-item>
-          </v-list>
+          <!-- Vista de lista de estudiantes -->
+          <div v-if="!selectedWorkerForSurvey">
+            <v-alert v-if="enrolledStudents.length === 0" type="info" class="mb-4">
+              No hay trabajadores inscritos en este curso
+            </v-alert>
+            <v-list v-else>
+              <v-list-item
+                v-for="student in enrolledStudents"
+                :key="student.id"
+                class="mb-2"
+              >
+                <template v-slot:prepend>
+                  <v-avatar color="primary" class="mr-3">
+                    <v-icon>mdi-account</v-icon>
+                  </v-avatar>
+                </template>
+
+                <v-list-item-title class="text-subtitle-1 font-weight-medium">
+                  {{ `${student.worker?.name || ''} ${student.worker?.father_surname || ''} ${student.worker?.mother_surname || ''}` }}
+                </v-list-item-title>
+
+                <template v-slot:append>
+                  <div class="d-flex gap-2">
+                    <v-btn
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      prepend-icon="mdi-clipboard-check"
+                      @click="viewWorkerSurvey(student.worker as unknown as WorkerUser, 'followup')"
+                    >
+                      Seguimiento
+                    </v-btn>
+                    <v-btn
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                      prepend-icon="mdi-clipboard-text"
+                      @click="viewWorkerSurvey(student.worker as unknown as WorkerUser, 'opinion')"
+                    >
+                      Opinión
+                    </v-btn>
+                  </div>
+                </template>
+              </v-list-item>
+            </v-list>
+          </div>
+
+          <!-- Vista de formulario de encuesta -->
+          <div v-else>
+            <v-btn
+              variant="text"
+              prepend-icon="mdi-arrow-left"
+              @click="closeSurveyView"
+              class="mb-4"
+            >
+              Volver a lista de estudiantes
+            </v-btn>
+
+            <div class="mb-4">
+              <h3 class="text-h6">
+                Estudiante: {{ `${selectedWorkerForSurvey.name} ${selectedWorkerForSurvey.father_surname} ${selectedWorkerForSurvey.mother_surname}` }}
+              </h3>
+            </div>
+
+            <!-- Formulario de seguimiento -->
+            <FollowUpCSATForm
+              v-if="selectedSurveyType === 'followup' && selectedCourse"
+              :course="selectedCourse"
+              :worker-id="selectedWorkerForSurvey.id"
+              :read-only="true"
+              @close="closeSurveyView"
+            />
+
+            <!-- Formulario de opinión -->
+            <OpinionSurveyForm
+              v-else-if="selectedSurveyType === 'opinion' && selectedCourse"
+              :course="selectedCourse"
+              :worker-id="selectedWorkerForSurvey.id"
+              :read-only="true"
+              @close="closeSurveyView"
+            />
+          </div>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="surveysDialog = false">Cerrar</v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -517,6 +577,7 @@ onMounted(loadMyCourses)
             :edit-mode="editMode"
             :course-data="selectedCourse"
             @course-created="handleCourseCreated"
+            @cancel="closeCreateCourseDialog"
           />
         </v-card-text>
       </v-card>

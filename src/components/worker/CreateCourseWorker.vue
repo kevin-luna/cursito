@@ -13,14 +13,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'course-created': []
+  'cancel': []
 }>()
 
 const authStore = useAuthStore()
 const periods = ref<Period[]>([])
 const workers = ref<Worker[]>([])
 const loading = ref(false)
-const additionalInstructors = ref<string[]>([])
-const instructorsDialog = ref(false)
 
 const formData = ref<CreateCourseRequest>({
   period_id: '',
@@ -85,10 +84,8 @@ const resetForm = () => {
 watch(
   () => [props.courseData, props.editMode] as const,
   ([newCourseData, isEditMode]) => {
-    console.log('Watch triggered - courseData:', newCourseData, 'editMode:', isEditMode)
 
     if (newCourseData && isEditMode) {
-      console.log('Loading course data for editing:', newCourseData)
       formData.value = {
         period_id: newCourseData.period_id || '',
         target: newCourseData.target || '',
@@ -104,9 +101,7 @@ watch(
         details: newCourseData.details || '',
         instructors: [authStore.user?.id || '']
       }
-      console.log('Form data after loading:', formData.value)
     } else if (!isEditMode) {
-      console.log('Resetting form (create mode)')
       resetForm()
     }
   },
@@ -114,13 +109,10 @@ watch(
 )
 
 const createCourse = async () => {
-  console.log('createCourse called')
-  console.log('formData.value:', formData.value)
 
   loading.value = true
   try {
     const newCourse = await courseService.create(formData.value)
-    console.log('Course created:', newCourse)
     alert('Curso creado exitosamente')
     resetForm()
     emit('course-created')
@@ -133,9 +125,6 @@ const createCourse = async () => {
 }
 
 const updateCourse = async () => {
-  console.log('updateCourse called')
-  console.log('props.courseData:', props.courseData)
-  console.log('formData.value:', formData.value)
 
   if (!props.courseData?.id) {
     console.error('No course ID found!')
@@ -145,7 +134,6 @@ const updateCourse = async () => {
 
   loading.value = true
   try {
-    console.log('Updating course with ID:', props.courseData.id)
     await courseService.update(props.courseData.id, formData.value)
     alert('Curso actualizado exitosamente')
     resetForm()
@@ -157,31 +145,6 @@ const updateCourse = async () => {
     loading.value = false
   }
 }
-
-// const openInstructorsDialog = () => {
-//   instructorsDialog.value = true
-// }
-
-// const saveInstructors = async () => {
-//   if (!props.courseData?.id) return
-//   loading.value = true
-//   try {
-//     const currentInstructors = await courseService.getInstructors(props.courseData.id)
-//     const currentIds = currentInstructors.map((i: any) => i.worker_id)
-
-//     // Agregar nuevos instructores
-//     for (const workerId of additionalInstructors.value) {
-//       if (!currentIds.includes(workerId)) {
-//         formData.value.instructors.push(workerId)
-//       }
-//     }
-
-//     alert('Instructores actualizados')
-//     instructorsDialog.value = false
-//   } finally {
-//     loading.value = false
-//   }
-// }
 
 onMounted(loadData)
 </script>
@@ -245,7 +208,7 @@ onMounted(loadData)
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn v-if="props.editMode" @click="resetForm">Cancelar</v-btn>
+        <v-btn v-if="props.editMode" @click="emit('cancel')">Cancelar</v-btn>
         <v-btn
           color="primary"
           :loading="loading"
@@ -255,28 +218,5 @@ onMounted(loadData)
         </v-btn>
       </v-card-actions>
     </v-card>
-
-    <!-- Dialog para agregar instructores -->
-    <v-dialog v-model="instructorsDialog" max-width="500px">
-      <v-card>
-        <v-card-title>Agregar Instructores Adicionales</v-card-title>
-        <v-card-text>
-          <v-list>
-            <v-list-item v-for="worker in workers" :key="worker.id">
-              <template v-slot:prepend>
-                <v-checkbox-btn v-model="additionalInstructors" :value="worker.id" />
-              </template>
-              <v-list-item-title>{{ worker.name }} {{ worker.father_surname }}</v-list-item-title>
-              <v-list-item-subtitle>{{ worker.email }}</v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="instructorsDialog = false">Cancelar</v-btn>
-          <v-btn color="primary" :loading="loading" @click="saveInstructors">Guardar</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </div>
 </template>
