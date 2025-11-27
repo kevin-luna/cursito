@@ -2,10 +2,12 @@
 import { ref, onMounted } from 'vue'
 import enrollmentService, { type Enrollment } from '@/services/enrollmentService'
 import courseService, { type Course } from '@/services/courseService'
-import surveyService, { type Survey, type Question } from '@/services/surveyService'
+import { type Survey } from '@/services/surveyService'
 import workerService from '@/services/workerService'
-import authService from '@/services/authService'
 import { useAuthStore } from '@/stores/auth'
+import OpinionSurveyForm from './OpinionSurveyForm.vue'
+import SurveyResponseWorker from './SurveyResponseWorker.vue'
+import FollowUpCSATForm from './FollowUpCSATForm.vue'
 
 const authStore = useAuthStore()
 const enrollments = ref<Enrollment[]>([])
@@ -14,8 +16,7 @@ const detailsDialog = ref(false)
 const surveysDialog = ref(false)
 const selectedCourse = ref<Course | null>(null)
 const availableSurveys = ref<Survey[]>([])
-const surveyQuestions = ref<Question[]>([])
-const surveyAnswers = ref<Record<string, string>>({})
+const selectedSurveyId = ref<string | null>(null)
 
 const typeLabels: Record<number, string> = { 0: 'Diplomado', 1: 'Taller' }
 const modeLabels: Record<number, string> = { 0: 'Virtual', 1: 'Presencial' }
@@ -56,46 +57,22 @@ const unenroll = async (enrollmentId: string) => {
   }
 }
 
-const viewSurveys = async (courseId: string) => {
-  loading.value = true
-  try {
-    availableSurveys.value = await courseService.getSurveys(courseId)
-    surveysDialog.value = true
-  } finally {
-    loading.value = false
-  }
+const viewSurveys = async () => {
+  // Mostrar encuestas estáticas con IDs reales del sistema
+  availableSurveys.value = [
+    { id: '3d1fa6a2-6d4a-42fa-a474-68c83156f541', name: 'Evaluación de seguimiento', created_at: '2024-02-01' },
+    { id: 'c2a77b75-8552-4fe0-ab49-231803244ace', name: 'Encuesta de opinión', created_at: '2025-07-06' }
+  ]
+  surveysDialog.value = true
 }
 
-const selectSurvey = async (survey: Survey) => {
-  loading.value = true
-  try {
-    surveyQuestions.value = await surveyService.getQuestionsBySurvey(survey.id)
-    surveyAnswers.value = {}
-  } finally {
-    loading.value = false
-  }
+const selectSurvey = (survey: Survey) => {
+  selectedSurveyId.value = survey.id
 }
 
-const submitSurvey = async (surveyId: string, courseId: string) => {
-  const answers = Object.entries(surveyAnswers.value).map(([question_id, value]) => ({
-    question_id,
-    value,
-  }))
-
-  if (answers.length === 0) {
-    alert('Por favor responda al menos una pregunta')
-    return
-  }
-
-  loading.value = true
-  try {
-    await surveyService.submitAnswers({ course_id: courseId, answers })
-    alert('Encuesta enviada exitosamente')
-    surveyAnswers.value = {}
-    surveyQuestions.value = []
-  } finally {
-    loading.value = false
-  }
+const closeSurveys = () => {
+  surveysDialog.value = false
+  selectedSurveyId.value = null
 }
 
 onMounted(loadEnrollments)
@@ -137,7 +114,7 @@ onMounted(loadEnrollments)
               </v-card-text>
               <v-card-actions>
                 <v-btn size="small" @click="viewDetails(enrollment.course)">Ver Detalles</v-btn>
-                <v-btn size="small" color="primary" @click="viewSurveys(enrollment.course_id)">
+                <v-btn size="small" color="primary" @click="viewSurveys()">
                   Encuestas
                 </v-btn>
                 <v-spacer />
@@ -186,11 +163,17 @@ onMounted(loadEnrollments)
     </v-dialog>
 
     <!-- Dialog encuestas -->
-    <v-dialog v-model="surveysDialog" max-width="800px">
+    <v-dialog v-model="surveysDialog" max-width="1200px" persistent>
       <v-card>
-        <v-card-title>Encuestas de Satisfacción</v-card-title>
+        <v-card-title class="d-flex justify-space-between align-center">
+          <span>Encuestas de Satisfacción</span>
+          <v-btn icon variant="text" @click="closeSurveys">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
         <v-card-text>
-          <v-list v-if="surveyQuestions.length === 0">
+          <!-- Lista de encuestas disponibles -->
+          <v-list v-if="!selectedSurveyId">
             <v-list-item v-for="survey in availableSurveys" :key="survey.id">
               <v-list-item-title>{{ survey.name }}</v-list-item-title>
               <template v-slot:append>
@@ -199,43 +182,28 @@ onMounted(loadEnrollments)
                 </v-btn>
               </template>
             </v-list-item>
+
+            <v-alert v-if="availableSurveys.length === 0" type="info">
+              No hay encuestas disponibles para este curso
+            </v-alert>
           </v-list>
 
-          <div v-else>
-            <h3 class="mb-4">Responde las siguientes preguntas:</h3>
-            <v-form>
-              <div v-for="question in surveyQuestions" :key="question.id" class="mb-4">
-                <v-textarea
-                  v-model="surveyAnswers[question.id]"
-                  :label="`${question.position}. ${question.question}`"
-                  rows="2"
-                />
-              </div>
-            </v-form>
+          <!-- Componente de Evaluación de seguimiento -->
+          <div v-else-if="selectedSurveyId === '3d1fa6a2-6d4a-42fa-a474-68c83156f541'">
+            <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="selectedSurveyId = null" class="mb-4">
+              Volver a lista de encuestas
+            </v-btn>
+            <FollowUpCSATForm />
           </div>
 
-          <v-alert v-if="availableSurveys.length === 0" type="info">
-            No hay encuestas disponibles para este curso
-          </v-alert>
+          <!-- Componente de Encuesta de opinión -->
+          <div v-else-if="selectedSurveyId === 'c2a77b75-8552-4fe0-ab49-231803244ace'">
+            <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="selectedSurveyId = null" class="mb-4">
+              Volver a lista de encuestas
+            </v-btn>
+            <OpinionSurveyForm />
+          </div>
         </v-card-text>
-        <v-card-actions>
-          <v-btn
-            v-if="surveyQuestions.length > 0"
-            @click="surveyQuestions = [];surveyAnswers = {}"
-          >
-            Volver
-          </v-btn>
-          <v-spacer />
-          <v-btn @click="surveysDialog = false">Cerrar</v-btn>
-          <v-btn
-            v-if="surveyQuestions.length > 0 && selectedCourse"
-            color="primary"
-            :loading="loading"
-            @click="submitSurvey(surveyQuestions[0]!.survey_id, selectedCourse.id)"
-          >
-            Enviar
-          </v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
   </div>
