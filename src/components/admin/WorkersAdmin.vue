@@ -89,10 +89,14 @@ const saveWorker = async () => {
   loading.value = true
   try {
     await workerService.update(selectedWorker.value.id, formData.value)
+    alert('Trabajador actualizado exitosamente')
     dialog.value = false
     await loadWorkers()
   } catch (error) {
     console.error('Error al actualizar trabajador:', error)
+    // Usar el error del servicio de trabajadores si está disponible
+    const errorMessage = workerService.lastError || 'Error al actualizar el trabajador'
+    alert(errorMessage)
   } finally {
     loading.value = false
   }
@@ -103,10 +107,14 @@ const deleteWorker = async () => {
   loading.value = true
   try {
     await workerService.delete(selectedWorker.value.id)
+    alert('Trabajador eliminado exitosamente')
     deleteDialog.value = false
     await loadWorkers()
   } catch (error) {
     console.error('Error al eliminar trabajador:', error)
+    // Usar el error del servicio de trabajadores si está disponible
+    const errorMessage = workerService.lastError || 'Error al eliminar el trabajador'
+    alert(errorMessage)
   } finally {
     loading.value = false
   }
