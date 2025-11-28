@@ -4,6 +4,7 @@ import courseService, { type Course } from '@/services/courseService'
 import enrollmentService, { type Enrollment } from '@/services/enrollmentService'
 import attendanceService, { type BulkAttendanceRequest } from '@/services/attendanceService'
 import surveyService from '@/services/surveyService'
+import reportService from '@/services/reportService'
 import { useAuthStore, type Worker as WorkerUser } from '@/stores/auth'
 import CreateCourseWorker from './CreateCourseWorker.vue'
 import workerService from '@/services/workerService'
@@ -26,6 +27,9 @@ const editedGrades = ref<Map<string, number>>(new Map())
 const attendedWorkers = ref<WorkerUser[]>([])
 const selectedWorkerForSurvey = ref<WorkerUser | null>(null)
 const selectedSurveyType = ref<'opinion' | 'followup' | null>(null)
+const downloadingAttendance = ref(false)
+const downloadingCoursesList = ref(false)
+const downloadingGrades = ref(false)
 
 // Computed properties para limitar el rango de fechas
 const minDate = computed(() => selectedCourse.value?.start_date || '')
@@ -286,6 +290,48 @@ const closeCreateCourseDialog = () => {
   createCourseDialog.value = false
 }
 
+const downloadAttendanceList = async () => {
+  if (!selectedCourse.value?.id) return
+
+  downloadingAttendance.value = true
+  try {
+    await reportService.downloadAttendanceList(selectedCourse.value.id)
+  } catch (error) {
+    console.error('Error al descargar lista de asistencia:', error)
+    alert('Error al descargar la lista de asistencia')
+  } finally {
+    downloadingAttendance.value = false
+  }
+}
+
+const downloadInstructorCourses = async () => {
+  if (!authStore.user?.id) return
+
+  downloadingCoursesList.value = true
+  try {
+    await reportService.downloadInstructorCourses(authStore.user.id)
+  } catch (error) {
+    console.error('Error al descargar lista de cursos:', error)
+    alert('Error al descargar la lista de cursos')
+  } finally {
+    downloadingCoursesList.value = false
+  }
+}
+
+const downloadGradesList = async () => {
+  if (!selectedCourse.value?.id) return
+
+  downloadingGrades.value = true
+  try {
+    await reportService.downloadGradesList(selectedCourse.value.id)
+  } catch (error) {
+    console.error('Error al descargar lista de calificaciones:', error)
+    alert('Error al descargar la lista de calificaciones')
+  } finally {
+    downloadingGrades.value = false
+  }
+}
+
 onMounted(loadMyCourses)
 </script>
 
@@ -294,13 +340,23 @@ onMounted(loadMyCourses)
     <v-card>
       <v-card-title class="d-flex justify-space-between align-center">
         <span class="text-h5">Cursos que Imparto</span>
-        <v-btn
-          color="primary"
-          prepend-icon="mdi-plus-circle"
-          @click="openCreateCourseDialog"
-        >
-          Crear Curso
-        </v-btn>
+        <div class="d-flex gap-2">
+          <v-btn
+            color="secondary"
+            prepend-icon="mdi-download"
+            :loading="downloadingCoursesList"
+            @click="downloadInstructorCourses"
+          >
+            Descargar Lista de Cursos
+          </v-btn>
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-plus-circle"
+            @click="openCreateCourseDialog"
+          >
+            Crear Curso
+          </v-btn>
+        </div>
       </v-card-title>
       <v-card-text>
         <v-row>
@@ -402,6 +458,14 @@ onMounted(loadMyCourses)
           </v-list>
         </v-card-text>
         <v-card-actions>
+          <v-btn
+            color="secondary"
+            prepend-icon="mdi-download"
+            :loading="downloadingAttendance"
+            @click="downloadAttendanceList"
+          >
+            Descargar Lista de Asistencia
+          </v-btn>
           <v-spacer />
           <v-btn @click="attendanceDialog = false">Cancelar</v-btn>
           <v-btn color="primary" :loading="loading" @click="saveAttendance">Guardar</v-btn>
@@ -454,6 +518,14 @@ onMounted(loadMyCourses)
         </v-card-text>
         <v-divider />
         <v-card-actions class="pa-4">
+          <v-btn
+            color="secondary"
+            prepend-icon="mdi-download"
+            :loading="downloadingGrades"
+            @click="downloadGradesList"
+          >
+            Descargar Lista de Calificaciones
+          </v-btn>
           <v-spacer />
           <v-btn @click="gradesDialog = false" variant="text">
             Cancelar

@@ -2,12 +2,9 @@
 import { ref, onMounted } from 'vue'
 import enrollmentService, { type Enrollment } from '@/services/enrollmentService'
 import courseService, { type Course } from '@/services/courseService'
-import { type Survey } from '@/services/surveyService'
 import workerService from '@/services/workerService'
+import reportService from '@/services/reportService'
 import { useAuthStore } from '@/stores/auth'
-import OpinionSurveyForm from './OpinionSurveyForm.vue'
-import SurveyResponseWorker from './SurveyResponseWorker.vue'
-import FollowUpCSATForm from './FollowUpCSATForm.vue'
 
 const authStore = useAuthStore()
 const enrollments = ref<Enrollment[]>([])
@@ -15,8 +12,9 @@ const loading = ref(false)
 const detailsDialog = ref(false)
 const surveysDialog = ref(false)
 const selectedCourse = ref<Course | null>(null)
-const availableSurveys = ref<Survey[]>([])
-const selectedSurveyId = ref<string | null>(null)
+const downloadingCertificate = ref(false)
+const downloadingFollowUpSurvey = ref(false)
+const downloadingOpinionSurvey = ref(false)
 
 const typeLabels: Record<number, string> = { 0: 'Diplomado', 1: 'Taller' }
 const modeLabels: Record<number, string> = { 0: 'Virtual', 1: 'Presencial' }
@@ -60,21 +58,53 @@ const unenroll = async (enrollmentId: string) => {
 const viewSurveys = async (course: Course | undefined) => {
   if (!course) return
   selectedCourse.value = course
-  // Mostrar encuestas estáticas con IDs reales del sistema
-  availableSurveys.value = [
-    { id: '3d1fa6a2-6d4a-42fa-a474-68c83156f541', name: 'Evaluación de seguimiento', created_at: '2024-02-01' },
-    { id: 'c2a77b75-8552-4fe0-ab49-231803244ace', name: 'Encuesta de opinión', created_at: '2025-07-06' }
-  ]
   surveysDialog.value = true
-}
-
-const selectSurvey = (survey: Survey) => {
-  selectedSurveyId.value = survey.id
 }
 
 const closeSurveys = () => {
   surveysDialog.value = false
-  selectedSurveyId.value = null
+}
+
+const downloadCertificate = async () => {
+  if (!authStore.user?.id || !selectedCourse.value?.id) return
+
+  downloadingCertificate.value = true
+  try {
+    await reportService.downloadEnrollmentCertificate(authStore.user.id, selectedCourse.value.id)
+  } catch (error) {
+    console.error('Error al descargar cédula:', error)
+    alert('Error al descargar la cédula de inscripción')
+  } finally {
+    downloadingCertificate.value = false
+  }
+}
+
+const downloadFollowUpSurvey = async () => {
+  if (!authStore.user?.id || !selectedCourse.value?.id) return
+
+  downloadingFollowUpSurvey.value = true
+  try {
+    await reportService.downloadFollowUpSurvey(authStore.user.id, selectedCourse.value.id)
+  } catch (error) {
+    console.error('Error al descargar evaluación de seguimiento:', error)
+    alert('Error al descargar la evaluación de seguimiento')
+  } finally {
+    downloadingFollowUpSurvey.value = false
+  }
+}
+
+const downloadOpinionSurvey = async () => {
+  if (!authStore.user?.id || !selectedCourse.value?.id) return
+
+  downloadingOpinionSurvey.value = true
+  try {
+    await reportService.downloadOpinionSurvey(authStore.user.id, selectedCourse.value.id)
+  } catch (error) {
+    console.error('Error al descargar encuesta de opinión:', error)
+    alert('Error al descargar la encuesta de opinión')
+  } finally {
+    downloadingOpinionSurvey.value = false
+  }
 }
 
 onMounted(loadEnrollments)
@@ -158,6 +188,14 @@ onMounted(loadEnrollments)
           </div>
         </v-card-text>
         <v-card-actions>
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-download"
+            :loading="downloadingCertificate"
+            @click="downloadCertificate"
+          >
+            Descargar Cédula de Inscripción
+          </v-btn>
           <v-spacer />
           <v-btn @click="detailsDialog = false">Cerrar</v-btn>
         </v-card-actions>
@@ -165,47 +203,65 @@ onMounted(loadEnrollments)
     </v-dialog>
 
     <!-- Dialog encuestas -->
-    <v-dialog v-model="surveysDialog" max-width="1200px" persistent>
+    <v-dialog v-model="surveysDialog" max-width="600px">
       <v-card>
         <v-card-title class="d-flex justify-space-between align-center">
-          <span>Encuestas de Satisfacción</span>
+          <span>Descargar Encuestas de Satisfacción</span>
           <v-btn icon variant="text" @click="closeSurveys">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
         <v-card-text>
-          <!-- Lista de encuestas disponibles -->
-          <v-list v-if="!selectedSurveyId">
-            <v-list-item v-for="survey in availableSurveys" :key="survey.id">
-              <v-list-item-title>{{ survey.name }}</v-list-item-title>
+          <p class="text-body-1 mb-4">
+            Descarga las respuestas de tus encuestas de satisfacción en formato PDF.
+          </p>
+
+          <v-list>
+            <v-list-item>
+              <v-list-item-title class="font-weight-medium">
+                Evaluación de seguimiento
+              </v-list-item-title>
+              <v-list-item-subtitle class="text-caption">
+                Resultados de tu evaluación CSAT
+              </v-list-item-subtitle>
               <template v-slot:append>
-                <v-btn size="small" color="primary" @click="selectSurvey(survey)">
-                  Responder
+                <v-btn
+                  color="primary"
+                  prepend-icon="mdi-download"
+                  :loading="downloadingFollowUpSurvey"
+                  @click="downloadFollowUpSurvey"
+                >
+                  Descargar PDF
                 </v-btn>
               </template>
             </v-list-item>
 
-            <v-alert v-if="availableSurveys.length === 0" type="info">
-              No hay encuestas disponibles para este curso
-            </v-alert>
+            <v-divider class="my-2" />
+
+            <v-list-item>
+              <v-list-item-title class="font-weight-medium">
+                Encuesta de opinión
+              </v-list-item-title>
+              <v-list-item-subtitle class="text-caption">
+                Resultados de tu encuesta de opinión del curso
+              </v-list-item-subtitle>
+              <template v-slot:append>
+                <v-btn
+                  color="primary"
+                  prepend-icon="mdi-download"
+                  :loading="downloadingOpinionSurvey"
+                  @click="downloadOpinionSurvey"
+                >
+                  Descargar PDF
+                </v-btn>
+              </template>
+            </v-list-item>
           </v-list>
-
-          <!-- Componente de Evaluación de seguimiento -->
-          <div v-else-if="selectedSurveyId === '3d1fa6a2-6d4a-42fa-a474-68c83156f541' && selectedCourse">
-            <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="selectedSurveyId = null" class="mb-4">
-              Volver a lista de encuestas
-            </v-btn>
-            <FollowUpCSATForm :course="selectedCourse" @close="closeSurveys" />
-          </div>
-
-          <!-- Componente de Encuesta de opinión -->
-          <div v-else-if="selectedSurveyId === 'c2a77b75-8552-4fe0-ab49-231803244ace' && selectedCourse">
-            <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="selectedSurveyId = null" class="mb-4">
-              Volver a lista de encuestas
-            </v-btn>
-            <OpinionSurveyForm :course="selectedCourse" @close="closeSurveys" />
-          </div>
         </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="closeSurveys">Cerrar</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
   </div>
