@@ -8,6 +8,9 @@ const dialog = ref(false)
 const editMode = ref(false)
 const selectedPeriod = ref<Period | null>(null)
 const formData = ref<CreatePeriodRequest>({ name: '', start_date: '', end_date: '' })
+const snackbar = ref(false)
+const snackbarMessage = ref('')
+const snackbarColor = ref('success')
 
 // Pagination state
 const page = ref(1)
@@ -53,11 +56,20 @@ const savePeriod = async () => {
   try {
     if (editMode.value && selectedPeriod.value) {
       await periodService.update(selectedPeriod.value.id, formData.value)
+      snackbarMessage.value = 'Periodo actualizado exitosamente'
     } else {
       await periodService.create(formData.value)
+      snackbarMessage.value = 'Periodo creado exitosamente'
     }
+    snackbarColor.value = 'success'
+    snackbar.value = true
     dialog.value = false
     await loadPeriods()
+  } catch {
+    // Usar el error del servicio de periodos si está disponible
+    snackbarMessage.value = periodService.lastError || 'Error al guardar el periodo'
+    snackbarColor.value = 'error'
+    snackbar.value = true
   } finally {
     loading.value = false
   }
@@ -117,5 +129,13 @@ onMounted(loadPeriods)
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Snackbar para mensajes -->
+    <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
+      {{ snackbarMessage }}
+      <template v-slot:actions>
+        <v-btn variant="text" @click="snackbar = false">Cerrar</v-btn>
+      </template>
+    </v-snackbar>
   </v-card>
 </template>
