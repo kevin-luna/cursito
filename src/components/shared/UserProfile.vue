@@ -121,7 +121,8 @@ const saveProfile = async () => {
     snackbarColor.value = 'success'
     showSnackbar.value = true
   } catch (error: any) {
-    snackbarMessage.value = error.response?.data?.detail || 'Error al actualizar el perfil'
+    // Usar el error del servicio de trabajadores si está disponible
+    snackbarMessage.value = workerService.lastError || error.response?.data?.detail || 'Error al actualizar el perfil'
     snackbarColor.value = 'error'
     showSnackbar.value = true
   } finally {
