@@ -62,7 +62,12 @@ const enrollInCourse = async (courseId: string) => {
     loading.value = true
     try {
       await enrollmentService.enrollInCourse(authStore.user?.id,courseId)
+      alert('Inscripción exitosa')
       await loadCourses()
+    } catch {
+      // Usar el error del servicio de inscripciones si está disponible
+      const errorMessage = enrollmentService.lastError || 'Error al inscribirse en el curso'
+      alert(errorMessage)
     } finally {
       loading.value = false
     }
