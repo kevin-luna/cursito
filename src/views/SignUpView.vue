@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import departmentService, { type Department } from '@/services/departmentService'
+import authService from '@/services/authService'
 import AboutDialog from '@/components/shared/AboutDialog.vue'
 
 const router = useRouter()
@@ -149,7 +150,8 @@ const handleSignUp = async () => {
     }, 1500)
   } catch (error: any) {
     console.error('Error en registro:', error)
-    errorMessage.value = error.response?.data?.detail || 'Error al registrar usuario. Por favor intenta de nuevo.'
+    // Usar el error del servicio de autenticación si está disponible
+    errorMessage.value = authService.lastError || error.response?.data?.detail || 'Error al registrar usuario. Por favor intenta de nuevo.'
   }
 }
 
