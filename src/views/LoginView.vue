@@ -26,7 +26,7 @@ const handleLogin = async () => {
     errorMessage.value = ''
 
     await authStore.login({
-      email: email.value,
+      email: email.value.toLowerCase(),
       password: password.value,
     })
 
