@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import workerService from '@/services/workerService'
 
 const authStore = useAuthStore()
-const allCourses = ref<Course[]>([])
+const availableCourses = ref<Course[]>([])
 const loading = ref(false)
 const detailsDialog = ref(false)
 const selectedCourse = ref<Course | null>(null)
@@ -20,14 +20,6 @@ const typeLabels: Record<number, string> = { 0: 'Diplomado', 1: 'Taller' }
 const modeLabels: Record<number, string> = { 0: 'Virtual', 1: 'Presencial' }
 const profileLabels: Record<number, string> = { 0: 'Formación', 1: 'Actualización Docente' }
 
-const availableCourses = computed(() => {
-  const today = new Date()
-  return allCourses.value.filter((course) => {
-    const startDate = new Date(course.start_date)
-    // Solo mostrar cursos que aún no han comenzado (próximos a comenzar)
-    return startDate > today
-  })
-})
 
 // Paginación frontend
 const paginatedCourses = computed(() => {
@@ -46,13 +38,13 @@ const loadCourses = async () => {
   loading.value = true
   try {
     // Cargar todos los cursos (usar un límite alto para obtener todos)
-    const courses = await courseService.getAll(1, 1000)
-    allCourses.value = courses
+    const courses = await workerService.getAvailableCourses(authStore.user.id)
+    availableCourses.value = courses
     const myEnrollments = await workerService.getCourses(authStore.user.id, 'enrolled')
     enrolledCourses.value = myEnrollments.map((e) => e.id)
   } catch (error) {
     console.error('Error loading courses:', error)
-    allCourses.value = []
+    availableCourses.value = []
   } finally {
     loading.value = false
   }

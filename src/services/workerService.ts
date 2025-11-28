@@ -66,6 +66,12 @@ class WorkerService {
     return response.data.items
   }
 
+
+  async getAvailableCourses(workerId: string): Promise<Course[]>{
+    const response = await api.get<PaginatedResponse<Course>>(`/workers/${workerId}/courses/available`)
+    return response.data.items
+  }
+
 }
 
 export default new WorkerService()
