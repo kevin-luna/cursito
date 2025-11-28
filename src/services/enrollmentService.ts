@@ -35,6 +35,8 @@ export interface BulkGradeResponse {
 }
 
 class EnrollmentService {
+  lastError: string | null = null
+
   async getAll(): Promise<Enrollment[]> {
     const response = await api.get<PaginatedResponse<Enrollment>>('/enrollings')
     return response.data.items
@@ -46,13 +48,29 @@ class EnrollmentService {
   }
 
   async create(data: CreateEnrollmentRequest): Promise<Enrollment> {
-    const response = await api.post<Enrollment>('/enrollments', data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.post<Enrollment>('/enrollments', data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async updateGrade(id: string, data: UpdateGradeRequest): Promise<Enrollment> {
-    const response = await api.put<Enrollment>(`/enrollings/${id}`, data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.put<Enrollment>(`/enrollings/${id}`, data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async delete(id: string): Promise<void> {
@@ -65,11 +83,19 @@ class EnrollmentService {
   }
 
   async enrollInCourse(workerId: string, courseId: string): Promise<Enrollment> {
-    const response = await api.post<Enrollment>('/enrollings', {
-      worker_id: workerId,
-      course_id: courseId
-    })
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.post<Enrollment>('/enrollings', {
+        worker_id: workerId,
+        course_id: courseId
+      })
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async unenrollFromCourse(enrollmentId: string): Promise<void> {
@@ -77,8 +103,16 @@ class EnrollmentService {
   }
 
   async updateBulkGrades(data: BulkGradeUpdateRequest): Promise<BulkGradeResponse> {
-    const response = await api.post<BulkGradeResponse>('/enrollings/bulk-grades', data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.post<BulkGradeResponse>('/enrollings/bulk-grades', data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 }
 

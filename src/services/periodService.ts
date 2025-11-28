@@ -21,6 +21,8 @@ export interface UpdatePeriodRequest {
 }
 
 class PeriodService {
+  lastError: string | null = null
+
   async getAll(page: number = 1, limit: number = 100): Promise<Period[]> {
     const response = await api.get<PaginatedResponse<Period>>('/periods/', {
       params: { page, limit }
@@ -34,13 +36,29 @@ class PeriodService {
   }
 
   async create(data: CreatePeriodRequest): Promise<Period> {
-    const response = await api.post<Period>('/periods/', data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.post<Period>('/periods/', data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async update(id: string, data: UpdatePeriodRequest): Promise<Period> {
-    const response = await api.put<Period>(`/periods/${id}/`, data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.put<Period>(`/periods/${id}/`, data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async delete(id: string): Promise<void> {

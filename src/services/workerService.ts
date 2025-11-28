@@ -18,6 +18,8 @@ export interface UpdateWorkerRequest {
 }
 
 class WorkerService {
+  lastError: string | null = null
+
   async getAll(): Promise<Worker[]> {
     // Use a large limit to get all workers in one request
     // If you have more than 1000 workers, consider implementing pagination in the UI
@@ -33,8 +35,16 @@ class WorkerService {
   }
 
   async update(id: string, data: UpdateWorkerRequest): Promise<Worker> {
-    const response = await api.put<Worker>(`/workers/${id}`, data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.put<Worker>(`/workers/${id}`, data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async delete(id: string): Promise<void> {

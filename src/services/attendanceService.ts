@@ -21,6 +21,8 @@ export interface BulkAttendanceRequest {
 }
 
 class AttendanceService {
+  lastError: string | null = null
+
   async getAll(): Promise<Attendance[]> {
     const response = await api.get<PaginatedResponse<Attendance>>('/attendances')
     return response.data.items
@@ -32,13 +34,29 @@ class AttendanceService {
   }
 
   async create(data: CreateAttendanceRequest): Promise<Attendance> {
-    const response = await api.post<Attendance>('/attendances', data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.post<Attendance>('/attendances', data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async createBulk(data: BulkAttendanceRequest): Promise<Attendance[]> {
-    const response = await api.post<Attendance[]>('/attendances/bulk', data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.post<Attendance[]>('/attendances/bulk', data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async delete(id: string): Promise<void> {

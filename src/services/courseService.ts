@@ -37,6 +37,8 @@ export interface CreateCourseRequest {
 export interface UpdateCourseRequest extends CreateCourseRequest {}
 
 class CourseService {
+  lastError: string | null = null
+
   async getAll(page: number = 1, limit: number = 100): Promise<Course[]> {
     const response = await api.get<PaginatedResponse<Course>>('/courses/', {
       params: { page, limit }
@@ -50,13 +52,29 @@ class CourseService {
   }
 
   async create(data: CreateCourseRequest): Promise<Course> {
-    const response = await api.post<Course>('/courses/', data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.post<Course>('/courses/', data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async update(id: string, data: UpdateCourseRequest): Promise<Course> {
-    const response = await api.put<Course>(`/courses/${id}/`, data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.put<Course>(`/courses/${id}/`, data)
+      return response.data
+    } catch (error: any) {
+      if (error.response && error.response.status >= 400) {
+        this.lastError = error.response.data?.detail || 'An error occurred'
+      }
+      throw error
+    }
   }
 
   async delete(id: string): Promise<void> {

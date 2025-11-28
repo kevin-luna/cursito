@@ -49,6 +49,8 @@ export interface ChangePasswordRequest {
 }
 
 class AuthService {
+  lastError: string | null = null
+
   /**
    * Inicia sesión con email y contraseña
    */
@@ -61,8 +63,19 @@ class AuthService {
    * Registra un nuevo usuario
    */
   async register(data: RegisterRequest): Promise<Worker> {
-    const response = await api.post<Worker>('/workers', data)
-    return response.data
+    try {
+      this.lastError = null
+      const response = await api.post<Worker>('/workers', data)
+      return response.data
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { detail?: string } } }
+        if (axiosError.response && axiosError.response.status && axiosError.response.status >= 400) {
+          this.lastError = axiosError.response.data?.detail || 'An error occurred'
+        }
+      }
+      throw error
+    }
   }
 
   /**
