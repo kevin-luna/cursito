@@ -12,6 +12,7 @@ import GradesAdmin from '@/components/admin/GradesAdmin.vue'
 import SurveysAdmin from '@/components/admin/SurveysAdmin.vue'
 import UserProfile from '@/components/shared/UserProfile.vue'
 import AboutDialog from '@/components/shared/AboutDialog.vue'
+import TeachingCoursesWorker from '@/components/worker/TeachingCoursesWorker.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -23,6 +24,7 @@ const aboutDialog = ref(false)
 const tabs = [
   { id: 'user-profile', title: 'Mi perfil', icon: 'mdi-account-circle'},
   { id: 'courses', title: 'Cursos', icon: 'mdi-school' },
+  //{ id: 'teaching-courses', title: 'Gestión de Cursos', icon: 'mdi-human-male-board' },
   { id: 'workers', title: 'Trabajadores', icon: 'mdi-account-group' },
   { id: 'departments', title: 'Departamentos', icon: 'mdi-domain' },
   { id: 'periods', title: 'Periodos', icon: 'mdi-calendar-range' },
@@ -89,7 +91,7 @@ onMounted(async () => {
 
     <v-main>
       <v-container fluid>
-        <CoursesAdmin v-if="selectedTab === 'courses'" />
+        <TeachingCoursesWorker v-if="selectedTab === 'courses'" mode="admin" />
         <WorkersAdmin v-else-if="selectedTab === 'workers'" />
         <DepartmentsAdmin v-else-if="selectedTab === 'departments'" />
         <PeriodsAdmin v-else-if="selectedTab === 'periods'" />

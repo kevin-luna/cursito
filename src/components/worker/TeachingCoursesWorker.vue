@@ -11,6 +11,15 @@ import workerService from '@/services/workerService'
 import OpinionSurveyForm from './OpinionSurveyForm.vue'
 import FollowUpCSATForm from './FollowUpCSATForm.vue'
 
+// Props para determinar el modo (admin o worker)
+interface Props {
+  mode?: 'admin' | 'worker'
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  mode: 'worker'
+})
+
 const authStore = useAuthStore()
 const myCourses = ref<Course[]>([])
 const selectedCourse = ref<Course | null>(null)
@@ -35,15 +44,25 @@ const downloadingGrades = ref(false)
 const minDate = computed(() => selectedCourse.value?.start_date || '')
 const maxDate = computed(() => selectedCourse.value?.end_date || '')
 
-const loadMyCourses = async () => {
-  if (!authStore.user?.id) return
+// Computed property para el título del componente
+const componentTitle = computed(() => {
+  return props.mode === 'admin' ? 'Todos los Cursos del Sistema' : 'Cursos que Imparto'
+})
 
+const loadMyCourses = async () => {
   loading.value = true
   try {
-    const userId = authStore.user.id
-    const allCourses = await workerService.getCourses(userId, 'teaching')
-
-    myCourses.value = allCourses
+    if (props.mode === 'admin') {
+      // Si es admin, cargar todos los cursos del sistema
+      const allCourses = await courseService.getAll(1, 1000)
+      myCourses.value = allCourses
+    } else {
+      // Si es worker, cargar solo los cursos que imparte
+      if (!authStore.user?.id) return
+      const userId = authStore.user.id
+      const allCourses = await workerService.getCourses(userId, 'teaching')
+      myCourses.value = allCourses
+    }
   } finally {
     loading.value = false
   }
@@ -339,9 +358,10 @@ onMounted(loadMyCourses)
   <div>
     <v-card>
       <v-card-title class="d-flex justify-space-between align-center">
-        <span class="text-h5">Cursos que Imparto</span>
+        <span class="text-h5">{{ componentTitle }}</span>
         <div class="d-flex gap-2">
           <v-btn
+            v-if="mode === 'worker'"
             color="secondary"
             prepend-icon="mdi-download"
             :loading="downloadingCoursesList"
@@ -425,8 +445,8 @@ onMounted(loadMyCourses)
           </v-col>
         </v-row>
 
-        <v-alert v-if="myCourses.length === 0" type="info" class="mt-4">
-          No eres instructor de ningún curso
+        <v-alert v-if="myCourses.length === 0 && !loading" type="info" class="mt-4">
+          {{ mode === 'admin' ? 'No hay cursos en el sistema' : 'No eres instructor de ningún curso' }}
         </v-alert>
       </v-card-text>
     </v-card>
