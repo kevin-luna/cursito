@@ -138,8 +138,8 @@ const changePassword = async () => {
     return
   }
 
-  if (passwordForm.value.new_password.length < 6) {
-    snackbarMessage.value = 'La contraseña debe tener al menos 6 caracteres'
+  if (passwordForm.value.new_password.length < 8) {
+    snackbarMessage.value = 'La contraseña debe tener al menos 8 caracteres'
     snackbarColor.value = 'error'
     showSnackbar.value = true
     return
