@@ -118,7 +118,9 @@ const createCourse = async () => {
     emit('course-created')
   } catch (error) {
     console.error('Error creating course:', error)
-    alert('Error al crear el curso: ' + error)
+    // Usar el error del servicio de cursos si está disponible
+    const errorMessage = courseService.lastError || 'Error al crear el curso'
+    alert(errorMessage)
   } finally {
     loading.value = false
   }
@@ -140,7 +142,9 @@ const updateCourse = async () => {
     emit('course-created')
   } catch (error) {
     console.error('Error updating course:', error)
-    alert('Error al actualizar el curso: ' + error)
+    // Usar el error del servicio de cursos si está disponible
+    const errorMessage = courseService.lastError || 'Error al actualizar el curso'
+    alert(errorMessage)
   } finally {
     loading.value = false
   }
