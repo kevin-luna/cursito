@@ -147,22 +147,9 @@ const handleLogin = async () => {
           <p class="text-caption text-grey">
             &copy; 2025 Cursito. Todos los derechos reservados.
           </p>
-          <v-btn
-            variant="text"
-            size="small"
-            color="primary"
-            @click="showAboutDialog = true"
-            class="mt-2"
-          >
-            <v-icon start size="small">mdi-information</v-icon>
-            Acerca de
-          </v-btn>
         </div>
       </v-col>
     </v-row>
-
-    <!-- Modal Acerca de -->
-    <AboutDialog v-model="showAboutDialog" />
   </v-container>
 </template>
 
