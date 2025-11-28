@@ -107,7 +107,19 @@ onMounted(loadPeriods)
         <v-card-text>
           <v-row>
             <v-col cols="12">
-              <v-text-field v-model="formData.name" label="Nombre del Periodo" required />
+              <v-text-field
+                v-model="formData.name"
+                label="Nombre del Periodo"
+                counter="100"
+                maxlength="100"
+                required
+                :rules="[
+                  (v) => !!v || 'El nombre del periodo es requerido',
+                  (v) => (v && v.trim().length > 0) || 'El nombre no puede estar vacío',
+                  (v) => (v && v.length <= 100) || 'El nombre no puede exceder 100 caracteres',
+                  (v) => /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-]+$/.test(v) || 'Solo se permiten letras, números, espacios, acentos y guiones'
+                ]"
+              />
             </v-col>
             <v-col cols="6">
               <v-text-field
@@ -115,10 +127,20 @@ onMounted(loadPeriods)
                 label="Fecha Inicio"
                 type="date"
                 required
+                :rules="[(v) => !!v || 'La fecha de inicio es requerida']"
               />
             </v-col>
             <v-col cols="6">
-              <v-text-field v-model="formData.end_date" label="Fecha Fin" type="date" required />
+              <v-text-field
+                v-model="formData.end_date"
+                label="Fecha Fin"
+                type="date"
+                required
+                :rules="[
+                  (v) => !!v || 'La fecha de fin es requerida',
+                  (v) => !formData.start_date || !v || new Date(v) >= new Date(formData.start_date) || 'La fecha de fin debe ser posterior o igual a la fecha de inicio'
+                ]"
+              />
             </v-col>
           </v-row>
         </v-card-text>

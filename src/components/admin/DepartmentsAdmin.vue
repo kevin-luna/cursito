@@ -100,7 +100,19 @@ onMounted(loadDepartments)
           {{ editMode ? 'Editar Departamento' : 'Nuevo Departamento' }}
         </v-card-title>
         <v-card-text>
-          <v-text-field v-model="formData.name" label="Nombre del Departamento" required />
+          <v-text-field
+            v-model="formData.name"
+            label="Nombre del Departamento"
+            counter="100"
+            maxlength="100"
+            required
+            :rules="[
+              (v) => !!v || 'El nombre del departamento es requerido',
+              (v) => (v && v.trim().length > 0) || 'El nombre no puede estar vacío',
+              (v) => (v && v.length <= 100) || 'El nombre no puede exceder 100 caracteres',
+              (v) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(v) || 'Solo se permiten letras, espacios y acentos'
+            ]"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />

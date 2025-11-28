@@ -235,7 +235,14 @@ onMounted(() => {
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="mdi-account"
-              :rules="[(v) => !!v || 'El nombre es requerido']"
+              counter="45"
+              maxlength="45"
+              :rules="[
+                (v) => !!v || 'El nombre es requerido',
+                (v) => (v && v.trim().length > 0) || 'El nombre no puede estar vacío',
+                (v) => (v && v.length <= 45) || 'El nombre no puede exceder 45 caracteres',
+                (v) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(v) || 'Solo se permiten letras, espacios y acentos'
+              ]"
             />
           </v-col>
           <v-col cols="12" md="4">
@@ -245,7 +252,14 @@ onMounted(() => {
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="mdi-account"
-              :rules="[(v) => !!v || 'El apellido paterno es requerido']"
+              counter="40"
+              maxlength="40"
+              :rules="[
+                (v) => !!v || 'El apellido paterno es requerido',
+                (v) => (v && v.trim().length > 0) || 'El apellido paterno no puede estar vacío',
+                (v) => (v && v.length <= 40) || 'El apellido paterno no puede exceder 40 caracteres',
+                (v) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(v) || 'Solo se permiten letras, espacios y acentos'
+              ]"
             />
           </v-col>
           <v-col cols="12" md="4">
@@ -255,6 +269,18 @@ onMounted(() => {
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="mdi-account"
+              counter="40"
+              maxlength="40"
+              :rules="[
+                (v) => {
+                  if (!v || v.trim().length === 0) return true
+                  return v.length <= 40 || 'El apellido materno no puede exceder 40 caracteres'
+                },
+                (v) => {
+                  if (!v || v.trim().length === 0) return true
+                  return /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(v) || 'Solo se permiten letras, espacios y acentos'
+                }
+              ]"
             />
           </v-col>
           <v-col cols="12" md="6">
@@ -275,6 +301,14 @@ onMounted(() => {
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="mdi-phone"
+              counter="10"
+              maxlength="10"
+              :rules="[
+                (v) => !!v || 'El teléfono es requerido',
+                (v) => (v && v.trim().length > 0) || 'El teléfono no puede estar vacío',
+                (v) => (v && v.length === 10) || 'El teléfono debe tener exactamente 10 dígitos',
+                (v) => /^[0-9]{10}$/.test(v) || 'El teléfono solo puede contener números'
+              ]"
             />
           </v-col>
         </v-row>
@@ -294,7 +328,14 @@ onMounted(() => {
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="mdi-email"
-              :rules="[(v) => !!v || 'El correo es requerido', (v) => /.+@.+\..+/.test(v) || 'Correo inválido']"
+              counter="64"
+              maxlength="64"
+              :rules="[
+                (v) => !!v || 'El correo es requerido',
+                (v) => (v && v.trim().length > 0) || 'El correo no puede estar vacío',
+                (v) => (v && v.length <= 64) || 'El correo no puede exceder 64 caracteres',
+                (v) => /.+@.+\..+/.test(v) || 'Correo inválido'
+              ]"
             />
           </v-col>
           <v-col cols="12" md="6">
@@ -326,7 +367,15 @@ onMounted(() => {
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="mdi-card-account-details"
-              :rules="[(v) => !!v || 'El RFC es requerido']"
+              counter="13"
+              maxlength="13"
+              @input="formData.rfc = formData.rfc?.toUpperCase()"
+              :rules="[
+                (v) => !!v || 'El RFC es requerido',
+                (v) => (v && v.trim().length > 0) || 'El RFC no puede estar vacío',
+                (v) => (v && v.length === 13) || 'El RFC debe tener exactamente 13 caracteres',
+                (v) => /^[A-Z&Ñ]{4}[0-9]{6}[A-Z0-9]{3}$/.test(v) || 'Formato de RFC inválido'
+              ]"
             />
           </v-col>
           <v-col cols="12" md="6">
@@ -336,7 +385,15 @@ onMounted(() => {
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="mdi-card-account-details"
-              :rules="[(v) => !!v || 'El CURP es requerido']"
+              counter="18"
+              maxlength="18"
+              @input="formData.curp = formData.curp?.toUpperCase()"
+              :rules="[
+                (v) => !!v || 'El CURP es requerido',
+                (v) => (v && v.trim().length > 0) || 'El CURP no puede estar vacío',
+                (v) => (v && v.length === 18) || 'El CURP debe tener exactamente 18 caracteres',
+                (v) => /^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[A-Z0-9]{2}$/.test(v) || 'Formato de CURP inválido'
+              ]"
             />
           </v-col>
         </v-row>

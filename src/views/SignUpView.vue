@@ -52,22 +52,34 @@ onMounted(() => {
 
 // Reglas de validación
 const nombreRules = [
-  (v: string) => !!v || 'El nombre completo es requerido',
-  (v: string) => v.length <= 45 || 'El nombre no puede exceder 45 caracteres',
+  (v: string) => !!v || 'El nombre es requerido',
+  (v: string) => (v && v.trim().length > 0) || 'El nombre no puede estar vacío',
+  (v: string) => (v && v.length <= 45) || 'El nombre no puede exceder 45 caracteres',
+  (v: string) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(v) || 'Solo se permiten letras, espacios y acentos',
 ]
 
 const apellidoPaternoRules = [
   (v: string) => !!v || 'El apellido paterno es requerido',
-  (v: string) => v.length <= 40 || 'El apellido paterno no puede exceder 40 caracteres',
+  (v: string) => (v && v.trim().length > 0) || 'El apellido paterno no puede estar vacío',
+  (v: string) => (v && v.length <= 40) || 'El apellido paterno no puede exceder 40 caracteres',
+  (v: string) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(v) || 'Solo se permiten letras, espacios y acentos',
 ]
 
 const apellidoMaternoRules = [
-  (v: string) => !!v || 'El apellido materno es requerido',
-  (v: string) => v.length <= 40 || 'El apellido materno no puede exceder 40 caracteres',
+  (v: string) => {
+    if (!v || v.trim().length === 0) return true // Opcional
+    return v.length <= 40 || 'El apellido materno no puede exceder 40 caracteres'
+  },
+  (v: string) => {
+    if (!v || v.trim().length === 0) return true // Opcional
+    return /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(v) || 'Solo se permiten letras, espacios y acentos'
+  },
 ]
 
 const emailRules = [
   (v: string) => !!v || 'El correo electrónico es requerido',
+  (v: string) => (v && v.trim().length > 0) || 'El correo electrónico no puede estar vacío',
+  (v: string) => (v && v.length <= 64) || 'El correo no puede exceder 64 caracteres',
   (v: string) =>
     /@veracruz\.tecnm\.mx$/.test(v) ||
     'El correo debe ser del dominio @veracruz.tecnm.mx',
@@ -77,13 +89,15 @@ const departamentoRules = [(v: string) => !!v || 'El departamento es requerido']
 
 const rfcRules = [
   (v: string) => !!v || 'El RFC es requerido',
-  (v: string) => v.length === 13 || 'El RFC debe tener exactamente 13 caracteres',
-  (v: string) => /^[A-Z&Ñ]{4}[0-9]{6}[A-Z0-9]{3}$/.test(v) || 'Formato de RFC inválido',
+  (v: string) => (v && v.trim().length > 0) || 'El RFC no puede estar vacío',
+  (v: string) => (v && v.length === 13) || 'El RFC debe tener exactamente 13 caracteres',
+  (v: string) => /^[A-Z&Ñ]{4}[0-9]{6}[A-Z0-9]{3}$/.test(v) || 'Formato de RFC inválido (4 letras, 6 números, 3 caracteres)',
 ]
 
 const curpRules = [
   (v: string) => !!v || 'El CURP es requerido',
-  (v: string) => v.length === 18 || 'El CURP debe tener exactamente 18 caracteres',
+  (v: string) => (v && v.trim().length > 0) || 'El CURP no puede estar vacío',
+  (v: string) => (v && v.length === 18) || 'El CURP debe tener exactamente 18 caracteres',
   (v: string) =>
     /^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[A-Z0-9]{2}$/.test(v) || 'Formato de CURP inválido',
 ]
@@ -92,12 +106,15 @@ const sexoRules = [(v: string) => !!v || 'El sexo es requerido']
 
 const telefonoRules = [
   (v: string) => !!v || 'El teléfono es requerido',
-  (v: string) => /^[0-9]{10}$/.test(v) || 'El teléfono debe tener exactamente 10 dígitos',
+  (v: string) => (v && v.trim().length > 0) || 'El teléfono no puede estar vacío',
+  (v: string) => (v && v.length === 10) || 'El teléfono debe tener exactamente 10 dígitos',
+  (v: string) => /^[0-9]{10}$/.test(v) || 'El teléfono solo puede contener números',
 ]
 
 const passwordRules = [
   (v: string) => !!v || 'La contraseña es requerida',
-  (v: string) => v.length >= 8 || 'La contraseña debe tener al menos 8 caracteres',
+  (v: string) => (v && v.length >= 8) || 'La contraseña debe tener al menos 8 caracteres',
+  (v: string) => (v && v.length <= 255) || 'La contraseña no puede exceder 255 caracteres',
 ]
 
 const confirmPasswordRules = [

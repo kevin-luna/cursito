@@ -164,7 +164,19 @@ onMounted(loadData)
         <v-form>
           <v-row>
             <v-col cols="12" md="6">
-              <v-text-field v-model="formData.name" label="Nombre del Curso" required />
+              <v-text-field
+                v-model="formData.name"
+                label="Nombre del Curso"
+                counter="150"
+                maxlength="150"
+                required
+                :rules="[
+                  (v) => !!v || 'El nombre del curso es requerido',
+                  (v) => (v && v.trim().length > 0) || 'El nombre no puede estar vacío',
+                  (v) => (v && v.length <= 150) || 'El nombre no puede exceder 150 caracteres',
+                  (v) => /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(v) || 'Solo se permiten letras, números, espacios y acentos'
+                ]"
+              />
             </v-col>
             <v-col cols="12" md="6">
               <v-select
@@ -174,37 +186,109 @@ onMounted(loadData)
                 item-value="id"
                 label="Periodo"
                 required
+                :rules="[(v) => !!v || 'El periodo es requerido']"
               />
             </v-col>
             <v-col cols="12">
-              <v-text-field v-model="formData.target" label="Objetivo del Curso" required />
+              <v-text-field
+                v-model="formData.target"
+                label="Objetivo del Curso"
+                counter="255"
+                maxlength="255"
+                required
+                :rules="[
+                  (v) => !!v || 'El objetivo es requerido',
+                  (v) => (v && v.trim().length > 0) || 'El objetivo no puede estar vacío',
+                  (v) => (v && v.length <= 255) || 'El objetivo no puede exceder 255 caracteres',
+                  (v) => /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s.,;:()\-]+$/.test(v) || 'Solo se permiten letras, números, espacios, acentos y puntuación básica'
+                ]"
+              />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field v-model="formData.start_date" label="Fecha Inicio" type="date" />
+              <v-text-field
+                v-model="formData.start_date"
+                label="Fecha Inicio"
+                type="date"
+                required
+                :rules="[(v) => !!v || 'La fecha de inicio es requerida']"
+              />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field v-model="formData.end_date" label="Fecha Fin" type="date" />
+              <v-text-field
+                v-model="formData.end_date"
+                label="Fecha Fin"
+                type="date"
+                required
+                :rules="[
+                  (v) => !!v || 'La fecha de fin es requerida',
+                  (v) => !formData.start_date || !v || new Date(v) >= new Date(formData.start_date) || 'La fecha de fin debe ser posterior a la fecha de inicio'
+                ]"
+              />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field v-model="formData.start_time" label="Hora Inicio" type="time" />
+              <v-text-field
+                v-model="formData.start_time"
+                label="Hora Inicio"
+                type="time"
+                required
+                :rules="[(v) => !!v || 'La hora de inicio es requerida']"
+              />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field v-model="formData.end_time" label="Hora Fin" type="time" />
+              <v-text-field
+                v-model="formData.end_time"
+                label="Hora Fin"
+                type="time"
+                required
+                :rules="[(v) => !!v || 'La hora de fin es requerida']"
+              />
             </v-col>
             <v-col cols="12" md="4">
-              <v-select v-model="formData.course_type" :items="typeOptions" label="Tipo" />
+              <v-select
+                v-model="formData.course_type"
+                :items="typeOptions"
+                label="Tipo"
+                required
+                :rules="[(v) => v !== null && v !== undefined || 'El tipo de curso es requerido']"
+              />
             </v-col>
             <v-col cols="12" md="4">
-              <v-select v-model="formData.modality" :items="modeOptions" label="Modalidad" />
+              <v-select
+                v-model="formData.modality"
+                :items="modeOptions"
+                label="Modalidad"
+                required
+                :rules="[(v) => v !== null && v !== undefined || 'La modalidad es requerida']"
+              />
             </v-col>
             <v-col cols="12" md="4">
-              <v-select v-model="formData.course_profile" :items="profileOptions" label="Perfil" />
+              <v-select
+                v-model="formData.course_profile"
+                :items="profileOptions"
+                label="Perfil"
+                required
+                :rules="[(v) => v !== null && v !== undefined || 'El perfil es requerido']"
+              />
             </v-col>
             <v-col cols="12">
-              <v-textarea v-model="formData.goal" label="Meta del Curso" rows="3" />
+              <v-textarea
+                v-model="formData.goal"
+                label="Meta del Curso"
+                rows="3"
+                required
+                :rules="[
+                  (v) => !!v || 'La meta del curso es requerida',
+                  (v) => (v && v.trim().length > 0) || 'La meta no puede estar vacía'
+                ]"
+              />
             </v-col>
             <v-col cols="12">
-              <v-textarea v-model="formData.details" label="Detalles" rows="3" />
+              <v-textarea
+                v-model="formData.details"
+                label="Detalles"
+                rows="3"
+                hint="Opcional"
+              />
             </v-col>
             <!-- <v-btn class="ml-4" color="primary" @click="instructorsDialog=true">Instructores</v-btn> -->
           </v-row>
