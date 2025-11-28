@@ -160,6 +160,10 @@ const saveAttendance = async () => {
 
     // Recargar asistencias después de guardar
     await loadAttendancesByDate()
+  } catch {
+    // Usar el error del servicio de asistencias si está disponible
+    const errorMessage = attendanceService.lastError || 'Error al registrar la asistencia'
+    alert(errorMessage)
   } finally {
     loading.value = false
   }
