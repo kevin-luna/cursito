@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import surveyService, { type SurveySubmitRequest } from '@/services/surveyService'
 import type { Course } from '@/services/courseService'
+import reportService from '@/services/reportService'
 import { useAuthStore } from '@/stores/auth'
 
 const OPINION_SURVEY_ID = 'c2a77b75-8552-4fe0-ab49-231803244ace'
@@ -411,6 +412,9 @@ const submitSurvey = async () => {
 
     await surveyService.submitSurveyAnswers(OPINION_SURVEY_ID, request)
     submitted.value = true
+
+    // Descargar PDF automáticamente después de enviar
+    await downloadPDF()
   } catch (error) {
     console.error('Error al enviar encuesta:', error)
     const err = error as { response?: { status?: number } }
@@ -419,6 +423,21 @@ const submitSurvey = async () => {
     } else {
       alert('Error al enviar la encuesta. Por favor intente de nuevo.')
     }
+  } finally {
+    loading.value = false
+  }
+}
+
+const downloadPDF = async () => {
+  const targetWorkerId = props.workerId || authStore.user?.id
+  if (!targetWorkerId) return
+
+  loading.value = true
+  try {
+    await reportService.downloadOpinionSurvey(targetWorkerId, props.course.id)
+  } catch (error) {
+    console.error('Error al descargar PDF:', error)
+    alert('Error al descargar el PDF de respuestas. Por favor intente de nuevo.')
   } finally {
     loading.value = false
   }
@@ -458,9 +477,14 @@ onMounted(checkIfAlreadyAnswered)
         <p class="text-body-2 text-grey mt-2">
           Solo puedes responder esta encuesta una vez por curso.
         </p>
-        <v-btn color="primary" class="mt-6" @click="emit('close')">
-          Volver
-        </v-btn>
+        <div class="mt-6 d-flex gap-3 justify-center">
+          <v-btn variant="outlined" @click="emit('close')">
+            Volver
+          </v-btn>
+          <v-btn color="primary" prepend-icon="mdi-download" @click="downloadPDF">
+            Descargar Respuestas PDF
+          </v-btn>
+        </div>
       </div>
 
       <!-- Formulario de evaluación -->
