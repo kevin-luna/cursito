@@ -2,7 +2,7 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosError } f
 
 // Configuración base de axios
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_URL || 'http://cursito.site:8000',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
