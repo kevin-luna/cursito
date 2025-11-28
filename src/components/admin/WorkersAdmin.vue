@@ -18,18 +18,18 @@ const formData = ref({
   telephone: '',
   email: '',
   name: '',
-  father_lastname: '',
-  mother_lastname: '',
+  father_surname: '',
+  mother_surname: '',
   department_id: '',
   position: 0,
 })
 
 const headers = [
   { title: 'Nombre', key: 'name' },
-  { title: 'Apellido Paterno', key: 'father_lastname' },
-  { title: 'Apellido Materno', key: 'mother_lastname' },
+  { title: 'Apellido Paterno', key: 'father_surname' },
+  { title: 'Apellido Materno', key: 'mother_surname' },
+  { title: 'RFC', key: 'rfc' },
   { title: 'Email', key: 'email' },
-  { title: 'Rol', key: 'role' },
   { title: 'Acciones', key: 'actions', sortable: false },
 ]
 
@@ -71,8 +71,8 @@ const openEditDialog = (worker: Worker) => {
     telephone: worker.telephone,
     email: worker.email,
     name: worker.name,
-    father_lastname: worker.father_surname,
-    mother_lastname: worker.mother_surname,
+    father_surname: worker.father_surname,
+    mother_surname: worker.mother_surname,
     department_id: worker.department_id,
     position: worker.position,
   }
@@ -158,14 +158,14 @@ onMounted(() => {
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="formData.father_lastname"
+                  v-model="formData.father_surname"
                   label="Apellido Paterno"
                   required
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="formData.mother_lastname"
+                  v-model="formData.mother_surname"
                   label="Apellido Materno"
                 ></v-text-field>
               </v-col>

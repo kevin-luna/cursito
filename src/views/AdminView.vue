@@ -26,10 +26,10 @@ const tabs = [
   { id: 'workers', title: 'Trabajadores', icon: 'mdi-account-group' },
   { id: 'departments', title: 'Departamentos', icon: 'mdi-domain' },
   { id: 'periods', title: 'Periodos', icon: 'mdi-calendar-range' },
-  { id: 'enrollments', title: 'Inscripciones', icon: 'mdi-clipboard-text' },
-  { id: 'attendances', title: 'Asistencias', icon: 'mdi-calendar-check' },
-  { id: 'grades', title: 'Calificaciones', icon: 'mdi-certificate' },
-  { id: 'surveys', title: 'Encuestas', icon: 'mdi-file-document' },
+  //{ id: 'enrollments', title: 'Inscripciones', icon: 'mdi-clipboard-text' },
+  //{ id: 'attendances', title: 'Asistencias', icon: 'mdi-calendar-check' },
+  //{ id: 'grades', title: 'Calificaciones', icon: 'mdi-certificate' },
+  //{ id: 'surveys', title: 'Encuestas', icon: 'mdi-file-document' },
 ]
 
 const handleLogout = async () => {
