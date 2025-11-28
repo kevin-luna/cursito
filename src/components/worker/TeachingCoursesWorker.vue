@@ -8,8 +8,9 @@ import reportService from '@/services/reportService'
 import { useAuthStore, type Worker as WorkerUser } from '@/stores/auth'
 import CreateCourseWorker from './CreateCourseWorker.vue'
 import workerService from '@/services/workerService'
-import OpinionSurveyForm from './OpinionSurveyForm.vue'
-import FollowUpCSATForm from './FollowUpCSATForm.vue'
+
+const FOLLOWUP_SURVEY_ID = '3d1fa6a2-6d4a-42fa-a474-68c83156f541'
+const OPINION_SURVEY_ID = 'c2a77b75-8552-4fe0-ab49-231803244ace'
 
 // Props para determinar el modo (admin o worker)
 interface Props {
@@ -34,11 +35,10 @@ const attendanceDate = ref('')
 const selectedStudents = ref<string[]>([])
 const editedGrades = ref<Map<string, number>>(new Map())
 const attendedWorkers = ref<WorkerUser[]>([])
-const selectedWorkerForSurvey = ref<WorkerUser | null>(null)
-const selectedSurveyType = ref<'opinion' | 'followup' | null>(null)
 const downloadingAttendance = ref(false)
 const downloadingCoursesList = ref(false)
 const downloadingGrades = ref(false)
+const downloadingSurveys = ref<Map<string, { followup: boolean; opinion: boolean }>>(new Map())
 
 // Computed properties para limitar el rango de fechas
 const minDate = computed(() => selectedCourse.value?.start_date || '')
@@ -253,10 +253,9 @@ const saveAllGrades = async () => {
 
 const openSurveysDialog = async (course: Course) => {
   selectedCourse.value = course
-  selectedWorkerForSurvey.value = null
-  selectedSurveyType.value = null
   loading.value = true
   surveysDialog.value = true
+  downloadingSurveys.value.clear()
   try {
     // Cargar estudiantes inscritos en el curso
     const enrollments = await courseService.getEnrollments(course.id)
@@ -266,14 +265,70 @@ const openSurveysDialog = async (course: Course) => {
   }
 }
 
-const viewWorkerSurvey = (worker: WorkerUser, surveyType: 'opinion' | 'followup') => {
-  selectedWorkerForSurvey.value = worker
-  selectedSurveyType.value = surveyType
+const downloadFollowUpSurvey = async (worker: WorkerUser) => {
+  if (!selectedCourse.value?.id || !worker.id) return
+
+  // Inicializar estado de descarga
+  if (!downloadingSurveys.value.has(worker.id)) {
+    downloadingSurveys.value.set(worker.id, { followup: false, opinion: false })
+  }
+  const state = downloadingSurveys.value.get(worker.id)!
+  state.followup = true
+
+  try {
+    // Verificar si existen respuestas
+    const answers = await surveyService.getWorkerSurveyAnswers(
+      FOLLOWUP_SURVEY_ID,
+      worker.id,
+      selectedCourse.value.id
+    )
+
+    if (!answers || answers.length === 0) {
+      alert(`${worker.name} ${worker.father_surname} no ha respondido la evaluación de seguimiento para este curso.`)
+      return
+    }
+
+    // Descargar PDF
+    await reportService.downloadFollowUpSurvey(worker.id, selectedCourse.value.id)
+  } catch (error) {
+    console.error('Error al descargar evaluación:', error)
+    alert('Error al descargar la evaluación de seguimiento.')
+  } finally {
+    state.followup = false
+  }
 }
 
-const closeSurveyView = () => {
-  selectedWorkerForSurvey.value = null
-  selectedSurveyType.value = null
+const downloadOpinionSurvey = async (worker: WorkerUser) => {
+  if (!selectedCourse.value?.id || !worker.id) return
+
+  // Inicializar estado de descarga
+  if (!downloadingSurveys.value.has(worker.id)) {
+    downloadingSurveys.value.set(worker.id, { followup: false, opinion: false })
+  }
+  const state = downloadingSurveys.value.get(worker.id)!
+  state.opinion = true
+
+  try {
+    // Verificar si existen respuestas
+    const answers = await surveyService.getWorkerSurveyAnswers(
+      OPINION_SURVEY_ID,
+      worker.id,
+      selectedCourse.value.id
+    )
+
+    if (!answers || answers.length === 0) {
+      alert(`${worker.name} ${worker.father_surname} no ha respondido la encuesta de opinión para este curso.`)
+      return
+    }
+
+    // Descargar PDF
+    await reportService.downloadOpinionSurvey(worker.id, selectedCourse.value.id)
+  } catch (error) {
+    console.error('Error al descargar encuesta:', error)
+    alert('Error al descargar la encuesta de opinión.')
+  } finally {
+    state.opinion = false
+  }
 }
 
 const handleCourseCreated = () => {
@@ -576,88 +631,55 @@ onMounted(loadMyCourses)
           </v-btn>
         </v-card-title>
         <v-card-text>
-          <!-- Vista de lista de estudiantes -->
-          <div v-if="!selectedWorkerForSurvey">
-            <v-alert v-if="enrolledStudents.length === 0" type="info" class="mb-4">
-              No hay trabajadores inscritos en este curso
-            </v-alert>
-            <v-list v-else>
-              <v-list-item
-                v-for="student in enrolledStudents"
-                :key="student.id"
-                class="mb-2"
-              >
-                <template v-slot:prepend>
-                  <v-avatar color="primary" class="mr-3">
-                    <v-icon>mdi-account</v-icon>
-                  </v-avatar>
-                </template>
+          <p class="text-body-1 mb-4">
+            Descarga las encuestas de satisfacción de los trabajadores en PDF.
+          </p>
 
-                <v-list-item-title class="text-subtitle-1 font-weight-medium">
-                  {{ `${student.worker?.name || ''} ${student.worker?.father_surname || ''} ${student.worker?.mother_surname || ''}` }}
-                </v-list-item-title>
-
-                <template v-slot:append>
-                  <div class="d-flex gap-2">
-                    <v-btn
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      prepend-icon="mdi-clipboard-check"
-                      @click="viewWorkerSurvey(student.worker as unknown as WorkerUser, 'followup')"
-                    >
-                      Seguimiento
-                    </v-btn>
-                    <v-btn
-                      size="small"
-                      color="secondary"
-                      variant="outlined"
-                      prepend-icon="mdi-clipboard-text"
-                      @click="viewWorkerSurvey(student.worker as unknown as WorkerUser, 'opinion')"
-                    >
-                      Opinión
-                    </v-btn>
-                  </div>
-                </template>
-              </v-list-item>
-            </v-list>
-          </div>
-
-          <!-- Vista de formulario de encuesta -->
-          <div v-else>
-            <v-btn
-              variant="text"
-              prepend-icon="mdi-arrow-left"
-              @click="closeSurveyView"
-              class="mb-4"
+          <v-alert v-if="enrolledStudents.length === 0" type="info" class="mb-4">
+            No hay trabajadores inscritos en este curso
+          </v-alert>
+          <v-list v-else>
+            <v-list-item
+              v-for="student in enrolledStudents"
+              :key="student.id"
+              class="mb-2"
             >
-              Volver a lista de estudiantes
-            </v-btn>
+              <template v-slot:prepend>
+                <v-avatar color="primary" class="mr-3">
+                  <v-icon>mdi-account</v-icon>
+                </v-avatar>
+              </template>
 
-            <div class="mb-4">
-              <h3 class="text-h6">
-                Estudiante: {{ `${selectedWorkerForSurvey.name} ${selectedWorkerForSurvey.father_surname} ${selectedWorkerForSurvey.mother_surname}` }}
-              </h3>
-            </div>
+              <v-list-item-title class="text-subtitle-1 font-weight-medium">
+                {{ `${student.worker?.name || ''} ${student.worker?.father_surname || ''} ${student.worker?.mother_surname || ''}` }}
+              </v-list-item-title>
 
-            <!-- Formulario de seguimiento -->
-            <FollowUpCSATForm
-              v-if="selectedSurveyType === 'followup' && selectedCourse"
-              :course="selectedCourse"
-              :worker-id="selectedWorkerForSurvey.id"
-              :read-only="true"
-              @close="closeSurveyView"
-            />
-
-            <!-- Formulario de opinión -->
-            <OpinionSurveyForm
-              v-else-if="selectedSurveyType === 'opinion' && selectedCourse"
-              :course="selectedCourse"
-              :worker-id="selectedWorkerForSurvey.id"
-              :read-only="true"
-              @close="closeSurveyView"
-            />
-          </div>
+              <template v-slot:append>
+                <div class="d-flex gap-2">
+                  <v-btn
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                    prepend-icon="mdi-download"
+                    :loading="downloadingSurveys.get(student.worker?.id || '')?.followup || false"
+                    @click="downloadFollowUpSurvey(student.worker as unknown as WorkerUser)"
+                  >
+                    Seguimiento PDF
+                  </v-btn>
+                  <v-btn
+                    size="small"
+                    color="secondary"
+                    variant="outlined"
+                    prepend-icon="mdi-download"
+                    :loading="downloadingSurveys.get(student.worker?.id || '')?.opinion || false"
+                    @click="downloadOpinionSurvey(student.worker as unknown as WorkerUser)"
+                  >
+                    Opinión PDF
+                  </v-btn>
+                </div>
+              </template>
+            </v-list-item>
+          </v-list>
         </v-card-text>
       </v-card>
     </v-dialog>
